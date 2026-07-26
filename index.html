@@ -3,7 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🎬 Кинотеатр — бесплатные фильмы и сериалы</title>
+    <title>🎬 Кинотеатр</title>
+    
+    <!-- ===== БАЗОВЫЙ URL ДЛЯ КАРТИНОК ===== -->
+    <base href="https://iframe.cloud/">
+    
     <style>
         /* ===== ТВОЙ ДИЗАЙН ===== */
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -185,7 +189,7 @@
 <!-- ===== ОСНОВНОЙ КОНТЕЙНЕР ===== -->
 <div class="container">
 
-    <!-- ===== КАТЕГОРИИ (БЫСТРЫЙ ДОСТУП) ===== -->
+    <!-- ===== КАТЕГОРИИ ===== -->
     <div class="categories">
         <button class="active" onclick="quickSearch('новинки')">🔥 Новинки</button>
         <button onclick="quickSearch('боевики')">💥 Боевики</button>
@@ -217,9 +221,6 @@
 
 <script>
 // =============================================
-// ЯДРО — ВСЯ ЛОГИКА РАБОТЫ
-// =============================================
-
 // ===== ПОИСК =====
 function search() {
     const query = document.getElementById('searchInput').value.trim();
@@ -227,52 +228,42 @@ function search() {
     loadFilm(query);
 }
 
-// ===== БЫСТРЫЙ ПОИСК ПО КАТЕГОРИЯМ =====
+// ===== КАТЕГОРИИ =====
 function quickSearch(category) {
     document.getElementById('searchInput').value = category;
     loadFilm(category);
-    
-    // Подсветка активной категории
     document.querySelectorAll('.categories button').forEach(btn => btn.classList.remove('active'));
     event.target.classList.add('active');
 }
 
-// ===== ЗАГРУЗКА ФИЛЬМА В ПЛЕЕР =====
+// ===== ЗАГРУЗКА =====
 function loadFilm(query) {
     const iframe = document.getElementById('player');
     const placeholder = document.getElementById('placeholder');
     const titleEl = document.getElementById('filmTitle');
     const statusEl = document.getElementById('status');
 
-    // Формируем URL для iframe.cloud
     const searchUrl = `https://iframe.cloud/search?q=${encodeURIComponent(query)}`;
 
-    // Показываем iframe, скрываем плейсхолдер
     iframe.style.display = 'block';
     placeholder.style.display = 'none';
-
-    // Загружаем
     iframe.src = searchUrl;
 
-    // Обновляем информацию
     titleEl.textContent = `«${query}»`;
     statusEl.textContent = `🔍 Поиск на iframe.cloud...`;
 
-    // Когда iframe загрузится
     iframe.onload = function() {
         statusEl.textContent = `✅ Результаты поиска «${query}»`;
     };
 }
 
-// ===== ГОРЯЧАЯ КЛАВИША ENTER =====
+// ===== ENTER =====
 document.getElementById('searchInput').addEventListener('keydown', function(e) {
     if (e.key === 'Enter') search();
 });
 
-// ===== ПРИВЕТСТВИЕ =====
 console.log('🎬 Кинотеатр загружен!');
-console.log('🔍 Введи название или выбери категорию');
-console.log('📺 Источник: iframe.cloud (клонирован)');
+console.log('📺 Постеры грузятся с iframe.cloud');
 </script>
 
 </body>
