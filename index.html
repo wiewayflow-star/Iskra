@@ -10,7 +10,7 @@
     button { padding: 10px 20px; }
     #results { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 20px; }
     .movie { cursor: pointer; border: 1px solid #333; padding: 10px; width: 150px; }
-    .movie img { width: 100%; }
+    .movie img { width: 100%; height: 225px; object-fit: cover; background: #333; }
     video { width: 100%; max-width: 800px; margin-top: 20px; display: block; }
   </style>
 </head>
@@ -42,7 +42,7 @@ function getUserId() {
   return id;
 }
 
-// ===== ГЛОБАЛЬНАЯ ФУНКЦИЯ ПОИСКА =====
+// ===== ПОИСК =====
 window.search = async function() {
   const query = document.getElementById('searchInput').value.trim();
   if (!query) return alert('Введите название');
@@ -52,18 +52,10 @@ window.search = async function() {
 
   try {
     const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
-    
-    // Проверяем статус ответа
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status}`);
-    }
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
     const data = await res.json();
-
-    // Проверяем, что data — это массив
-    if (!Array.isArray(data)) {
-      throw new Error('API вернул не массив');
-    }
+    if (!Array.isArray(data)) throw new Error('API вернул не массив');
 
     if (data.length === 0) {
       container.innerHTML = '<p>😕 Ничего не найдено</p>';
@@ -72,9 +64,10 @@ window.search = async function() {
 
     container.innerHTML = data.map(item => `
       <div class="movie" onclick="playMovie('${item.magnet}', '${item.title}')">
-        <img src="${item.poster || 'https://via.placeholder.com/150x225?text=Нет+постера'}" 
-             onerror="this.src='https://via.placeholder.com/150x225?text=Нет+постера'">
+        <img src="${item.poster || 'https://placehold.co/150x225/333/fff?text=Нет+постера'}" 
+             onerror="this.src='https://placehold.co/150x225/333/fff?text=Нет+постера'">
         <p><strong>${item.title || 'Без названия'}</strong><br>${item.year || ''}</p>
+        <p style="font-size:12px;color:#888;">⚡${item.seeders || 0} сидов</p>
       </div>
     `).join('');
 
@@ -84,15 +77,17 @@ window.search = async function() {
   }
 };
 
-// ===== ФУНКЦИЯ ПЛЕЕРА =====
-window.playMovie = async function(magnet, title) {
+// ===== ПЛЕЕР =====
+window.playMovie = function(magnet, title) {
+  console.log('🎬 Клик по:', title);
+  console.log('🧲 Magnet:', magnet);
+
   if (!magnet) {
     alert('Нет magnet-ссылки для этого фильма');
     return;
   }
 
   const video = document.getElementById('player');
-  const userId = getUserId();
 
   if (currentTorrent) {
     currentTorrent.destroy();
@@ -100,21 +95,24 @@ window.playMovie = async function(magnet, title) {
   }
 
   const client = new WebTorrent();
-  
+  video.innerHTML = '<p>⏳ Загрузка торрента...</p>';
+
   client.add(magnet, function(torrent) {
     currentTorrent = torrent;
-    
+    console.log('✅ Торрент загружен, файлов:', torrent.files.length);
+
     const file = torrent.files.find(f => 
       f.name.endsWith('.mp4') || 
       f.name.endsWith('.mkv') || 
       f.name.endsWith('.avi')
     );
-    
+
     if (!file) {
       alert('Видеофайл не найден в этом торренте');
       return;
     }
-    
+
+    console.log('🎥 Найден файл:', file.name);
     file.createReadStream().pipe(video);
     video.play();
   });
