@@ -109,7 +109,7 @@ window.search = async function() {
 };
 
 // =============================================
-// ПЛЕЕР — С МАКСИМАЛЬНЫМИ ЛОГАМИ
+// ПЛЕЕР С ТАЙМАУТОМ
 // =============================================
 window.playMovie = function(magnet, title) {
   console.log('🎬 Клик по:', title);
@@ -145,24 +145,40 @@ window.playMovie = function(magnet, title) {
 
   const statusDiv = document.createElement('div');
   statusDiv.style.cssText = 'color:#aaa; text-align:center; padding:40px; font-size:18px;';
-  statusDiv.textContent = '⏳ Подключение к пирам...';
+  statusDiv.textContent = '⏳ Подключение к пирам (до 30 сек)...';
   video.appendChild(statusDiv);
 
   console.log('🔄 Создаём WebTorrent клиент...');
   const client = new WebTorrent();
   currentClient = client;
 
-  client.on('error', function(err) {
-    console.error('❌ Ошибка WebTorrent:', err);
-    video.innerHTML = `<div style="color:#ff4444; text-align:center; padding:40px;">❌ Ошибка: ${err.message}</div>`;
-  });
+  let timeoutId = setTimeout(() => {
+    console.warn('⏰ Таймаут 30 секунд — торрент не загрузился');
+    if (video) {
+      video.innerHTML = `
+        <div style="color:#ffaa00; text-align:center; padding:40px;">
+          ⏰ Торрент не загрузился за 30 секунд<br>
+          <span style="font-size:14px;color:#888;">Попробуйте другой фильм или скачайте торрент вручную</span>
+          <br><br>
+          <button onclick="window.open('${magnet}', '_blank')" style="padding:10px 20px;background:#ff6600;border:none;border-radius:6px;color:#fff;cursor:pointer;">
+            📥 Скачать magnet
+          </button>
+        </div>
+      `;
+    }
+  }, 30000);
 
-  client.on('torrent', function(torrent) {
-    console.log('📥 Получен торрент-событие');
+  client.on('error', function(err) {
+    clearTimeout(timeoutId);
+    console.error('❌ Ошибка WebTorrent:', err);
+    if (video) {
+      video.innerHTML = `<div style="color:#ff4444; text-align:center; padding:40px;">❌ Ошибка: ${err.message}</div>`;
+    }
   });
 
   console.log('🔄 Добавляем magnet в клиент...');
   client.add(magnet, function(torrent) {
+    clearTimeout(timeoutId);
     currentTorrent = torrent;
     console.log('✅ Торрент добавлен!');
     console.log('📄 Файлов:', torrent.files.length);
@@ -181,7 +197,12 @@ window.playMovie = function(magnet, title) {
     if (!file) {
       const names = torrent.files.map(f => f.name).slice(0, 5).join(', ');
       console.warn('📁 Видеофайл не найден. Файлы:', names);
-      video.innerHTML = `<div style="color:#ffaa00; text-align:center; padding:40px;">❌ Видеофайл не найден<br><span style="font-size:14px;color:#888;">Доступны: ${names}</span></div>`;
+      video.innerHTML = `
+        <div style="color:#ffaa00; text-align:center; padding:40px;">
+          ❌ Видеофайл не найден<br>
+          <span style="font-size:14px;color:#888;">Доступны: ${names}</span>
+        </div>
+      `;
       return;
     }
 
