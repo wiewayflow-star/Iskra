@@ -8,21 +8,17 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: Arial, sans-serif; padding: 20px; background: #111; color: #fff; min-height: 100vh; }
     h1 { margin-bottom: 20px; font-size: 28px; }
-    .search-box { display: flex; gap: 10px; margin-bottom: 30px; flex-wrap: wrap; }
+    .search-box { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
     input { padding: 12px 16px; width: 350px; max-width: 100%; border: 1px solid #333; background: #222; color: #fff; border-radius: 6px; font-size: 16px; }
     input:focus { outline: none; border-color: #ff6600; }
     button { padding: 12px 24px; background: #ff6600; color: #fff; border: none; border-radius: 6px; font-size: 16px; cursor: pointer; transition: background 0.2s; }
     button:hover { background: #ff5500; }
-    #results { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 10px; justify-content: flex-start; }
-    .movie { cursor: pointer; border: 1px solid #333; border-radius: 8px; padding: 10px; width: 160px; background: #1a1a1a; transition: transform 0.15s, border-color 0.15s; text-align: center; }
-    .movie:hover { transform: scale(1.03); border-color: #ff6600; }
-    .movie img { width: 100%; height: 225px; object-fit: cover; border-radius: 4px; background: #2a2a2a; }
-    .movie p { margin-top: 8px; font-size: 14px; line-height: 1.4; word-break: break-word; }
-    .movie .seeders { font-size: 12px; color: #888; }
-    #player { width: 100%; max-width: 900px; margin-top: 30px; display: block; background: #000; border-radius: 8px; min-height: 400px; }
-    .status-msg { padding: 20px; text-align: center; color: #aaa; font-size: 18px; }
-    .error-msg { color: #ff4444; text-align: center; padding: 20px; }
-    @media (max-width: 600px) { .movie { width: 140px; } .movie img { height: 180px; } input { width: 100%; } }
+    #player { width: 100%; height: 600px; border: none; border-radius: 8px; background: #000; margin-top: 10px; }
+    .hint { color: #666; font-size: 14px; margin-top: 10px; }
+    .status { padding: 10px; color: #aaa; }
+    .links { margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap; }
+    .links a { color: #ff6600; text-decoration: none; padding: 6px 12px; border: 1px solid #333; border-radius: 4px; }
+    .links a:hover { background: #222; }
   </style>
 </head>
 <body>
@@ -32,198 +28,71 @@
   <input id="searchInput" placeholder="Введите название фильма или сериала" />
   <button onclick="search()">Найти</button>
 </div>
-<div id="results"></div>
-<video id="player" controls></video>
 
-<!-- WebTorrent -->
-<script src="https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js"></script>
+<div class="links">
+  <a href="#" onclick="setSite('kinokong')">Kinokong</a>
+  <a href="#" onclick="setSite('seasonvar')">Seasonvar</a>
+  <a href="#" onclick="setSite('rezka')">Rezka</a>
+  <a href="#" onclick="setSite('kinogo')">Kinogo</a>
+</div>
+
+<iframe id="player" src=""></iframe>
+<div class="status" id="status">Введите название и нажмите "Найти"</div>
 
 <script>
-// =============================================
-// ТВОИ ДАННЫЕ SUPABASE
-// =============================================
-const SUPABASE_URL = 'https://oitthmhpguzzaqzudris.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9pdHRobWhwZ3V6emFxenVkcmlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUwODYwMzQsImV4cCI6MjEwMDY2MjAzNH0.jbZKmwpXCloK_-FfeSRdkVT63wohS2_5CVYB2vGpBS0';
-
-let currentClient = null;
-let currentTorrent = null;
-
-function getUserId() {
-  let id = localStorage.getItem('userId');
-  if (!id) {
-    id = crypto.randomUUID ? crypto.randomUUID() : Date.now() + '-' + Math.random();
-    localStorage.setItem('userId', id);
+// Список пиратских сайтов для поиска
+const SITES = {
+  kinokong: {
+    name: 'Kinokong',
+    url: 'https://kinokong.org/search?q='
+  },
+  seasonvar: {
+    name: 'Seasonvar',
+    url: 'https://seasonvar.ru/search/?q='
+  },
+  rezka: {
+    name: 'Rezka',
+    url: 'https://rezka.ag/search/?do=search&subaction=search&q='
+  },
+  kinogo: {
+    name: 'Kinogo',
+    url: 'https://kinogo.biz/search/'
   }
-  return id;
+};
+
+let currentSite = 'kinokong';
+
+function setSite(site) {
+  currentSite = site;
+  document.getElementById('status').textContent = `🔍 Поиск на ${SITES[site].name}`;
+  // Если уже есть поисковый запрос, перезапускаем поиск
+  const query = document.getElementById('searchInput').value.trim();
+  if (query) performSearch(query);
 }
 
-function showStatus(msg) {
-  const el = document.getElementById('results');
-  if (el) el.innerHTML = `<div class="status-msg">${msg}</div>`;
-}
-
-function showError(msg) {
-  const el = document.getElementById('results');
-  if (el) el.innerHTML = `<div class="error-msg">❌ ${msg}</div>`;
-}
-
-// =============================================
-// ПОИСК
-// =============================================
-window.search = async function() {
+function search() {
   const query = document.getElementById('searchInput').value.trim();
   if (!query) { alert('Введите название'); return; }
+  performSearch(query);
+}
 
-  const container = document.getElementById('results');
-  container.innerHTML = '<div class="status-msg">⏳ Поиск...</div>';
+function performSearch(query) {
+  const site = SITES[currentSite];
+  const url = site.url + encodeURIComponent(query);
+  const iframe = document.getElementById('player');
+  iframe.src = url;
+  document.getElementById('status').textContent = `🔍 Поиск "${query}" на ${site.name}...`;
+  
+  // Добавляем обработчик загрузки iframe
+  iframe.onload = function() {
+    document.getElementById('status').textContent = `✅ Показан результат поиска "${query}" на ${site.name}`;
+  };
+}
 
-  try {
-    const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+// Автоматически устанавливаем первый сайт
+document.getElementById('status').textContent = 'Выберите сайт и введите название';
 
-    const data = await res.json();
-    if (!Array.isArray(data)) { showError('API вернул некорректный ответ'); return; }
-
-    if (data.length === 0) { showStatus('😕 Ничего не найдено'); return; }
-
-    container.innerHTML = data.map(item => {
-      const poster = item.poster || 'https://placehold.co/150x225/333/fff?text=Нет+постера';
-      const title = (item.title || 'Без названия').replace(/'/g, "\\'");
-      const magnet = (item.magnet || '').replace(/'/g, "\\'");
-      const year = item.year || '';
-      const seeders = item.seeders || 0;
-
-      return `
-        <div class="movie" onclick="playMovie('${magnet}', '${title}')">
-          <img src="${poster}" onerror="this.src='https://placehold.co/150x225/333/fff?text=Нет+постера'" alt="${title}" loading="lazy" />
-          <p><strong>${title}</strong><br>${year}</p>
-          <div class="seeders">⚡ ${seeders} сидов</div>
-        </div>
-      `;
-    }).join('');
-
-  } catch (error) {
-    console.error('Ошибка поиска:', error);
-    showError('Ошибка поиска. Попробуйте позже.');
-  }
-};
-
-// =============================================
-// ПЛЕЕР С ТАЙМАУТОМ
-// =============================================
-window.playMovie = function(magnet, title) {
-  console.log('🎬 Клик по:', title);
-  console.log('🧲 Magnet:', magnet);
-
-  if (!magnet) {
-    alert('❌ Нет magnet-ссылки');
-    return;
-  }
-
-  if (typeof WebTorrent === 'undefined') {
-    console.error('❌ WebTorrent не загружен!');
-    alert('❌ WebTorrent не загружен. Проверьте интернет.');
-    return;
-  }
-
-  const video = document.getElementById('player');
-  if (!video) {
-    console.error('❌ Элемент video не найден!');
-    return;
-  }
-
-  // Останавливаем предыдущий торрент
-  if (currentClient) {
-    try { currentClient.destroy(); } catch (e) { console.warn('Ошибка при остановке:', e); }
-    currentClient = null;
-    currentTorrent = null;
-  }
-
-  video.innerHTML = '';
-  video.style.display = 'block';
-  video.controls = true;
-
-  const statusDiv = document.createElement('div');
-  statusDiv.style.cssText = 'color:#aaa; text-align:center; padding:40px; font-size:18px;';
-  statusDiv.textContent = '⏳ Подключение к пирам (до 30 сек)...';
-  video.appendChild(statusDiv);
-
-  console.log('🔄 Создаём WebTorrent клиент...');
-  const client = new WebTorrent();
-  currentClient = client;
-
-  let timeoutId = setTimeout(() => {
-    console.warn('⏰ Таймаут 30 секунд — торрент не загрузился');
-    if (video) {
-      video.innerHTML = `
-        <div style="color:#ffaa00; text-align:center; padding:40px;">
-          ⏰ Торрент не загрузился за 30 секунд<br>
-          <span style="font-size:14px;color:#888;">Попробуйте другой фильм или скачайте торрент вручную</span>
-          <br><br>
-          <button onclick="window.open('${magnet}', '_blank')" style="padding:10px 20px;background:#ff6600;border:none;border-radius:6px;color:#fff;cursor:pointer;">
-            📥 Скачать magnet
-          </button>
-        </div>
-      `;
-    }
-  }, 30000);
-
-  client.on('error', function(err) {
-    clearTimeout(timeoutId);
-    console.error('❌ Ошибка WebTorrent:', err);
-    if (video) {
-      video.innerHTML = `<div style="color:#ff4444; text-align:center; padding:40px;">❌ Ошибка: ${err.message}</div>`;
-    }
-  });
-
-  console.log('🔄 Добавляем magnet в клиент...');
-  client.add(magnet, function(torrent) {
-    clearTimeout(timeoutId);
-    currentTorrent = torrent;
-    console.log('✅ Торрент добавлен!');
-    console.log('📄 Файлов:', torrent.files.length);
-    console.log('👥 Пиров:', torrent.numPeers);
-    console.log('📊 Скорость:', torrent.downloadSpeed, 'bytes/s');
-
-    if (video) video.innerHTML = '';
-
-    const file = torrent.files.find(f =>
-      f.name.endsWith('.mp4') ||
-      f.name.endsWith('.mkv') ||
-      f.name.endsWith('.avi') ||
-      f.name.endsWith('.webm')
-    );
-
-    if (!file) {
-      const names = torrent.files.map(f => f.name).slice(0, 5).join(', ');
-      console.warn('📁 Видеофайл не найден. Файлы:', names);
-      video.innerHTML = `
-        <div style="color:#ffaa00; text-align:center; padding:40px;">
-          ❌ Видеофайл не найден<br>
-          <span style="font-size:14px;color:#888;">Доступны: ${names}</span>
-        </div>
-      `;
-      return;
-    }
-
-    console.log('🎥 Найден файл:', file.name);
-    console.log('📏 Размер:', (file.length / (1024 * 1024)).toFixed(2), 'MB');
-
-    try {
-      const stream = file.createReadStream();
-      stream.pipe(video);
-      video.play();
-      console.log('▶️ ВИДЕО ЗАПУЩЕНО!');
-    } catch (streamError) {
-      console.error('❌ Ошибка стриминга:', streamError);
-      video.innerHTML = `<div style="color:#ff4444; text-align:center; padding:40px;">❌ Ошибка: ${streamError.message}</div>`;
-    }
-  });
-
-  console.log('✅ playMovie завершил выполнение');
-};
-
-console.log('✅ Кинотеатр загружен. Введите название и нажмите "Найти".');
+console.log('✅ Кинотеатр загружен. Используй кнопки выше для выбора сайта.');
 </script>
 </body>
 </html>
