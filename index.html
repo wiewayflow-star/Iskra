@@ -3,279 +3,167 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🎬 Кинотеатр — без рекламы</title>
+    <title>🎬 Мой Кинотеатр</title>
+    <!-- Подключаем стили, которые ты скачал -->
+    <link rel="stylesheet" href="css/cinema.css">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Segoe UI', Arial, sans-serif;
-            background: #0a0a0a;
-            color: #fff;
-            min-height: 100vh;
-        }
-
-        .header {
-            background: linear-gradient(135deg, #0d0d0d, #1a1a2e);
-            padding: 16px 30px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 15px;
-            border-bottom: 2px solid #ff4500;
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-        }
-        .header .logo {
-            font-size: 26px;
-            font-weight: 800;
-            color: #ff4500;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .header .logo span { color: #fff; font-weight: 300; }
-        .header .badge {
-            background: #ff4500;
-            color: #fff;
-            padding: 2px 14px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-weight: 700;
-        }
-        .search-box { display: flex; gap: 8px; flex-wrap: wrap; }
-        .search-box input {
-            padding: 10px 18px;
-            width: 320px;
-            border: 1px solid #333;
-            background: #1a1a1a;
-            color: #fff;
-            border-radius: 8px;
-            font-size: 14px;
-            transition: all 0.3s;
-        }
-        .search-box input:focus {
-            outline: none;
-            border-color: #ff4500;
-            background: #222;
-        }
-        .search-box button {
-            padding: 10px 24px;
-            background: #ff4500;
-            color: #fff;
-            border: none;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        .search-box button:hover { background: #e63e00; }
-
-        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
-
-        #results {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-        .movie {
-            cursor: pointer;
-            border: 1px solid #2a2a2a;
-            border-radius: 10px;
-            padding: 12px;
-            width: 180px;
-            background: #1a1a1a;
-            transition: all 0.2s;
-        }
-        .movie:hover {
-            border-color: #ff4500;
-            transform: scale(1.03);
-        }
-        .movie img {
+        /* Дополнительные стили для маскировки */
+        .iframe-wrapper {
             width: 100%;
-            height: 260px;
-            object-fit: cover;
-            border-radius: 6px;
-            background: #2a2a2a;
-        }
-        .movie p {
-            margin-top: 8px;
-            font-size: 14px;
-            text-align: center;
-        }
-
-        #player-container {
-            width: 100%;
-            max-width: 1000px;
-            margin: 20px auto;
-            background: #000;
-            border-radius: 12px;
+            height: 600px;
             overflow: hidden;
-            display: none;
-        }
-        #player {
-            width: 100%;
-            max-height: 600px;
-            display: block;
+            border-radius: 12px;
             background: #000;
+            position: relative;
         }
-        .info-bar {
-            padding: 15px 20px;
-            background: #1a1a1a;
-            border-top: 1px solid #2a2a2a;
-            display: flex;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 10px;
+        .iframe-wrapper iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            /* Смещаем так, чтобы скрыть шапку и меню iframe.cloud */
+            margin-top: -80px; /* Скрываем верхнюю часть */
+            clip-path: inset(80px 0px 0px 0px);
         }
-        .info-bar .title { font-size: 18px; font-weight: 600; }
-        .info-bar .title span { color: #ff4500; }
-        .info-bar .status { color: #888; font-size: 13px; }
-
-        .placeholder {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 400px;
-            color: #555;
-            text-align: center;
-            gap: 15px;
+        /* Убираем всё лишнее на iframe.cloud с помощью CSS (работает в некоторых браузерах) */
+        .iframe-wrapper iframe body {
+            margin: 0;
         }
-        .placeholder .icon { font-size: 60px; }
-
-        @media (max-width: 700px) {
-            .header { flex-direction: column; align-items: stretch; }
-            .search-box input { width: 100%; }
-            .movie { width: 140px; }
-            .movie img { height: 200px; }
-            #player { max-height: 300px; }
+        @media (max-width: 768px) {
+            .iframe-wrapper {
+                height: 300px;
+            }
+            .iframe-wrapper iframe {
+                margin-top: -60px;
+                clip-path: inset(60px 0px 0px 0px);
+            }
         }
+        /* Остальные стили твоего дизайна уже есть в cinema.css */
     </style>
 </head>
 <body>
+    <!-- Шапка твоего сайта (из скачанного дизайна) -->
+    <header class="header header-centered">
+        <a href="index.html" class="logo">
+            <span class="logo-icon">▶</span>
+        </a>
+        <nav class="nav nav-centered">
+            <a href="#" class="nav-link active" data-tab="popular">Популярное</a>
+            <a href="#" class="nav-link" data-tab="top">Топ 250</a>
+            <a href="#" class="nav-link" data-tab="favorites">Избранное</a>
+        </nav>
+    </header>
 
-<div class="header">
-    <div class="logo">🎬 <span>Кинотеатр</span> <span class="badge">🔒 Без рекламы</span></div>
-    <div class="search-box">
-        <input id="searchInput" placeholder="Название фильма..." />
-        <button onclick="search()">🔍 Найти</button>
-    </div>
-</div>
-
-<div class="container">
-    <div id="results"></div>
-
-    <div id="player-container">
-        <video id="player" controls></video>
-        <div class="info-bar">
-            <div class="title">🎞️ <span id="filmTitle">Выберите фильм</span></div>
-            <div class="status" id="status">Готов к просмотру</div>
-        </div>
-    </div>
-
-    <div class="placeholder" id="placeholder">
-        <div class="icon">🎥</div>
-        <h2>Введите название и нажмите «Найти»</h2>
-        <p>Видео в твоём плеере, без рекламы</p>
-    </div>
-</div>
-
-<script>
-// =============================================
-// ПОИСК
-// =============================================
-window.search = async function() {
-    const query = document.getElementById('searchInput').value.trim();
-    if (!query) { alert('Введите название'); return; }
-
-    const container = document.getElementById('results');
-    container.innerHTML = '<p style="color:#aaa;">⏳ Поиск...</p>';
-
-    try {
-        const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-        const data = await res.json();
-        if (!Array.isArray(data) || data.length === 0) {
-            container.innerHTML = '<p style="color:#aaa;">😕 Ничего не найдено</p>';
-            return;
-        }
-
-        container.innerHTML = data.map(item => `
-            <div class="movie" onclick="playVideo('${item.videoUrl}', '${item.title}', '${item.poster}', '${item.description}')">
-                <img src="${item.poster || 'https://placehold.co/180x260/333/fff?text=Нет+постера'}" 
-                     onerror="this.src='https://placehold.co/180x260/333/fff?text=Нет+постера'" />
-                <p><strong>${item.title}</strong></p>
+    <!-- Основной контент -->
+    <main class="main">
+        <!-- Поиск (твой дизайн) -->
+        <section class="hero" id="heroSection">
+            <div class="hero-content">
+                <div class="hero-search">
+                    <div class="hero-search-box">
+                        <span class="hero-search-icon">🔍</span>
+                        <input type="text" id="searchInput" placeholder="Найти фильм или сериал..." autocomplete="off">
+                        <div class="search-results" id="searchResults"></div>
+                    </div>
+                </div>
+                <h1 class="hero-title">Смотрите фильмы <span class="gradient-text">бесплатно</span></h1>
+                <p class="hero-subtitle">Огромная коллекция фильмов и сериалов в HD качестве</p>
+                <div class="hero-stats">
+                    <div class="stat"><span class="stat-value">50K+</span><span class="stat-label">Фильмов</span></div>
+                    <div class="stat"><span class="stat-value">1080p</span><span class="stat-label">Качество</span></div>
+                    <div class="stat"><span class="stat-value">0₽</span><span class="stat-label">Бесплатно</span></div>
+                </div>
             </div>
-        `).join('');
+        </section>
 
-    } catch (error) {
-        console.error('Ошибка:', error);
-        container.innerHTML = '<p style="color:#ff4444;">❌ Ошибка поиска</p>';
-    }
-};
+        <!-- Контейнер для iframe -->
+        <section class="movies-section" id="moviesSection">
+            <div class="section-header">
+                <h2 class="section-title" id="sectionTitle">🔥 Популярные фильмы</h2>
+            </div>
+            <div class="iframe-wrapper">
+                <iframe id="playerFrame" src="https://iframe.cloud" allowfullscreen></iframe>
+            </div>
+        </section>
+    </main>
 
-// =============================================
-// ПЛЕЕР — ТВОЙ, ВОРУЕТ ВИДЕО
-// =============================================
-window.playVideo = function(videoUrl, title, poster, description) {
-    console.log('🎬 Воспроизведение:', title);
-    console.log('🔗 Ссылка на видео:', videoUrl);
+    <!-- Футер -->
+    <footer class="footer">
+        <p>© 2026 Мой Кинотеатр</p>
+    </footer>
 
-    const container = document.getElementById('player-container');
-    const video = document.getElementById('player');
-    const titleEl = document.getElementById('filmTitle');
-    const statusEl = document.getElementById('status');
-    const placeholder = document.getElementById('placeholder');
+    <!-- JavaScript для поиска -->
+    <script>
+        // =============================================
+        // ПОИСК
+        // =============================================
+        const searchInput = document.getElementById('searchInput');
+        const playerFrame = document.getElementById('playerFrame');
+        const resultsContainer = document.getElementById('searchResults');
 
-    if (!videoUrl) {
-        alert('❌ Ссылка на видео не найдена');
-        return;
-    }
+        searchInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                const query = this.value.trim();
+                if (query.length >= 2) {
+                    // Открываем iframe с поиском на iframe.cloud
+                    const url = `https://iframe.cloud/search?q=${encodeURIComponent(query)}`;
+                    playerFrame.src = url;
+                    // Обновляем заголовок
+                    document.getElementById('sectionTitle').textContent = `🔍 Результаты поиска: "${query}"`;
+                    // Скрываем выпадающий список
+                    resultsContainer.innerHTML = '';
+                }
+            }
+        });
 
-    container.style.display = 'block';
-    placeholder.style.display = 'none';
+        // Автодополнение (как на iframe.cloud)
+        searchInput.addEventListener('input', function() {
+            const query = this.value.trim();
+            if (query.length < 2) {
+                resultsContainer.innerHTML = '';
+                return;
+            }
+            // Здесь можно было бы сделать запрос к API для автодополнения,
+            // но мы просто показываем сообщение о поиске
+            resultsContainer.innerHTML = `
+                <div class="search-loading">Поиск "${query}"...</div>
+            `;
+            // Через секунду убираем (имитация)
+            clearTimeout(this._timeout);
+            this._timeout = setTimeout(() => {
+                resultsContainer.innerHTML = `
+                    <div class="search-item" onclick="document.getElementById('searchInput').value='${query}'; document.getElementById('searchInput').dispatchEvent(new KeyboardEvent('keydown', {key:'Enter'}));">
+                        <span class="search-item-title">Найти "${query}"</span>
+                    </div>
+                `;
+            }, 300);
+        });
 
-    // Очищаем и настраиваем видео
-    video.innerHTML = '';
-    video.controls = true;
+        // Клик по результату автодополнения
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('.search-item')) {
+                // уже обработано в onclick
+            }
+        });
 
-    // Добавляем источник
-    const source = document.createElement('source');
-    source.src = videoUrl;
-    source.type = 'video/mp4';
-    video.appendChild(source);
+        // Табы (популярное, топ, избранное)
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+                this.classList.add('active');
+                const tab = this.dataset.tab;
+                let url = 'https://iframe.cloud';
+                if (tab === 'popular') url = 'https://iframe.cloud';
+                else if (tab === 'top') url = 'https://iframe.cloud/top';
+                else if (tab === 'favorites') url = 'https://iframe.cloud/favorites';
+                playerFrame.src = url;
+                document.getElementById('sectionTitle').textContent = this.textContent;
+            });
+        });
 
-    // Если это m3u8, используем hls.js
-    if (videoUrl.endsWith('.m3u8') && typeof Hls !== 'undefined') {
-        const hls = new Hls();
-        hls.loadSource(videoUrl);
-        hls.attachMedia(video);
-        hls.on(Hls.Events.MANIFEST_PARSED, () => video.play());
-    } else {
-        video.load();
-        video.play().catch(e => console.warn('Автовоспроизведение заблокировано:', e));
-    }
-
-    titleEl.textContent = title;
-    statusEl.textContent = '▶️ Сейчас играет';
-    document.getElementById('results').innerHTML = `<p style="color:#aaa;">▶️ Сейчас играет: <strong>${title}</strong></p>`;
-};
-
-// =============================================
-// ENTER
-// =============================================
-document.getElementById('searchInput').addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') search();
-});
-
-console.log('🎬 Кинотеатр загружен. Видео воруем с iframe.cloud!');
-</script>
-
-<!-- Подключаем hls.js для m3u8 -->
-<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+        // При загрузке страницы показываем популярное
+        playerFrame.src = 'https://iframe.cloud';
+        console.log('🎬 Кинотеатр загружен!');
+    </script>
 </body>
 </html>
