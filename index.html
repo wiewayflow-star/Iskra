@@ -1,210 +1,279 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🎬 Кинотеатр — бесплатно и без рекламы</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: 'Segoe UI', Arial, sans-serif;
-      background: #0a0a0a;
-      color: #fff;
-      min-height: 100vh;
-    }
-    
-    /* ===== ШАПКА ===== */
-    .header {
-      background: linear-gradient(135deg, #1a1a2e, #16213e);
-      padding: 20px 30px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 15px;
-      border-bottom: 2px solid #ff6600;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
-    .header h1 {
-      font-size: 26px;
-      color: #ff6600;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .header h1 span { color: #fff; font-weight: 300; }
-    .header .badge {
-      font-size: 12px;
-      background: #ff6600;
-      color: #fff;
-      padding: 2px 12px;
-      border-radius: 20px;
-      font-weight: bold;
-    }
-    .search-box { display: flex; gap: 10px; flex-wrap: wrap; }
-    .search-box input {
-      padding: 10px 16px;
-      width: 300px;
-      border: 1px solid #333;
-      background: #1a1a1a;
-      color: #fff;
-      border-radius: 6px;
-      font-size: 14px;
-      transition: border 0.3s;
-    }
-    .search-box input:focus {
-      outline: none;
-      border-color: #ff6600;
-      background: #222;
-    }
-    .search-box button {
-      padding: 10px 24px;
-      background: #ff6600;
-      color: #fff;
-      border: none;
-      border-radius: 6px;
-      font-size: 14px;
-      cursor: pointer;
-      font-weight: bold;
-      transition: background 0.2s;
-    }
-    .search-box button:hover { background: #e65c00; }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎬 Кинотеатр — бесплатные фильмы и сериалы</title>
+    <style>
+        /* ===== ТВОЙ ДИЗАЙН ===== */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: #0a0a0a;
+            color: #fff;
+            min-height: 100vh;
+        }
 
-    /* ===== ПЛЕЕР ===== */
-    #player-container {
-      width: 100%;
-      max-width: 1100px;
-      margin: 20px auto;
-      background: #000;
-      border-radius: 10px;
-      overflow: hidden;
-      box-shadow: 0 0 50px rgba(255, 102, 0, 0.05);
-      min-height: 500px;
-    }
-    #player-container iframe {
-      width: 100%;
-      height: 600px;
-      border: none;
-      display: block;
-    }
+        /* ===== ШАПКА ===== */
+        .header {
+            background: linear-gradient(135deg, #0d0d0d, #1a1a2e);
+            padding: 16px 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 15px;
+            border-bottom: 2px solid #ff4500;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        .header .logo {
+            font-size: 26px;
+            font-weight: 800;
+            color: #ff4500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .header .logo span { color: #fff; font-weight: 300; }
+        .header .badge {
+            background: #ff4500;
+            color: #fff;
+            padding: 2px 14px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+        .search-box { display: flex; gap: 8px; flex-wrap: wrap; }
+        .search-box input {
+            padding: 10px 18px;
+            width: 320px;
+            border: 1px solid #333;
+            background: #1a1a1a;
+            color: #fff;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        .search-box input:focus {
+            outline: none;
+            border-color: #ff4500;
+            background: #222;
+            box-shadow: 0 0 20px rgba(255, 69, 0, 0.1);
+        }
+        .search-box button {
+            padding: 10px 24px;
+            background: #ff4500;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .search-box button:hover {
+            background: #e63e00;
+            transform: scale(1.02);
+        }
 
-    /* ===== ИНФОРМАЦИОННАЯ ПАНЕЛЬ ===== */
-    .info-bar {
-      padding: 15px 25px;
-      background: #1a1a1a;
-      border-top: 1px solid #2a2a2a;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-    .info-bar .title { font-size: 18px; font-weight: bold; }
-    .info-bar .title span { color: #ff6600; }
-    .info-bar .status { color: #888; font-size: 14px; }
+        /* ===== ОСНОВНОЙ КОНТЕЙНЕР ===== */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
 
-    /* ===== ПЛЕЙСХОЛДЕР ===== */
-    .placeholder {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 600px;
-      color: #555;
-      font-size: 18px;
-      gap: 15px;
-      text-align: center;
-      padding: 20px;
-    }
-    .placeholder .icon { font-size: 70px; }
-    .placeholder .sub { font-size: 14px; color: #444; }
+        /* ===== ПЛЕЕР ===== */
+        .player-wrapper {
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 0 60px rgba(255, 69, 0, 0.05);
+            margin-bottom: 30px;
+        }
+        .player-wrapper iframe {
+            width: 100%;
+            height: 600px;
+            border: none;
+            display: block;
+        }
 
-    /* ===== АДАПТИВ ===== */
-    @media (max-width: 700px) {
-      .header { flex-direction: column; align-items: stretch; }
-      .search-box input { width: 100%; }
-      #player-container iframe { height: 300px; }
-      .placeholder { height: 300px; }
-      .info-bar { flex-direction: column; align-items: flex-start; }
-    }
-  </style>
+        /* ===== ПЛЕЙСХОЛДЕР ===== */
+        .placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 600px;
+            color: #555;
+            text-align: center;
+            padding: 20px;
+            gap: 15px;
+            background: radial-gradient(circle at center, #111, #0a0a0a);
+        }
+        .placeholder .icon { font-size: 80px; opacity: 0.5; }
+        .placeholder h2 { font-size: 24px; font-weight: 300; color: #888; }
+        .placeholder p { font-size: 14px; color: #444; max-width: 400px; }
+
+        /* ===== ИНФО-ПАНЕЛЬ ===== */
+        .info-bar {
+            padding: 15px 20px;
+            background: #1a1a1a;
+            border-top: 1px solid #2a2a2a;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .info-bar .title { font-size: 18px; font-weight: 600; }
+        .info-bar .title span { color: #ff4500; }
+        .info-bar .status { color: #888; font-size: 13px; }
+
+        /* ===== КАТЕГОРИИ ===== */
+        .categories {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin: 20px 0 25px;
+        }
+        .categories button {
+            padding: 8px 20px;
+            background: #1a1a1a;
+            color: #aaa;
+            border: 1px solid #2a2a2a;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+        .categories button:hover,
+        .categories button.active {
+            background: #ff4500;
+            color: #fff;
+            border-color: #ff4500;
+        }
+
+        /* ===== АДАПТИВ ===== */
+        @media (max-width: 768px) {
+            .header { flex-direction: column; align-items: stretch; padding: 15px; }
+            .search-box input { width: 100%; }
+            .player-wrapper iframe { height: 300px; }
+            .placeholder { height: 300px; }
+            .placeholder .icon { font-size: 50px; }
+            .info-bar { flex-direction: column; align-items: flex-start; }
+        }
+    </style>
 </head>
 <body>
 
-<div class="header">
-  <h1>
-    🎬 <span>Кинотеатр</span>
-    <span class="badge">🔒 Без рекламы</span>
-  </h1>
-  <div class="search-box">
-    <input id="searchInput" placeholder="Название фильма или сериала..." />
-    <button onclick="search()">🔍 Найти</button>
-  </div>
-</div>
+<!-- ===== ШАПКА ===== -->
+<header class="header">
+    <div class="logo">
+        🎬 <span>Кинотеатр</span>
+        <span class="badge">🔒 Без рекламы</span>
+    </div>
+    <div class="search-box">
+        <input id="searchInput" placeholder="Название фильма или сериала..." />
+        <button onclick="search()">🔍 Найти</button>
+    </div>
+</header>
 
-<div id="player-container">
-  <div class="placeholder" id="placeholder">
-    <div class="icon">🎥</div>
-    <div>Введите название и нажмите «Найти»</div>
-    <div class="sub">Бесплатные фильмы и сериалы в HD качестве</div>
-  </div>
-  <iframe id="player" src="" allowfullscreen style="display:none;"></iframe>
-</div>
+<!-- ===== ОСНОВНОЙ КОНТЕЙНЕР ===== -->
+<div class="container">
 
-<div class="info-bar">
-  <div class="title">🎞️ <span id="filmTitle">Выберите фильм</span></div>
-  <div class="status" id="status">Готов к поиску</div>
+    <!-- ===== КАТЕГОРИИ (БЫСТРЫЙ ДОСТУП) ===== -->
+    <div class="categories">
+        <button class="active" onclick="quickSearch('новинки')">🔥 Новинки</button>
+        <button onclick="quickSearch('боевики')">💥 Боевики</button>
+        <button onclick="quickSearch('комедии')">😂 Комедии</button>
+        <button onclick="quickSearch('драмы')">🎭 Драмы</button>
+        <button onclick="quickSearch('фантастика')">🚀 Фантастика</button>
+        <button onclick="quickSearch('ужасы')">👻 Ужасы</button>
+        <button onclick="quickSearch('сериалы')">📺 Сериалы</button>
+        <button onclick="quickSearch('мультфильмы')">🎨 Мультфильмы</button>
+    </div>
+
+    <!-- ===== ПЛЕЕР ===== -->
+    <div class="player-wrapper">
+        <div class="placeholder" id="placeholder">
+            <div class="icon">🎥</div>
+            <h2>Введите название и нажмите «Найти»</h2>
+            <p>Фильмы, сериалы, мультфильмы — всё бесплатно и в HD качестве</p>
+        </div>
+        <iframe id="player" src="" allowfullscreen style="display:none;"></iframe>
+    </div>
+
+    <!-- ===== ИНФО-ПАНЕЛЬ ===== -->
+    <div class="info-bar">
+        <div class="title">🎞️ <span id="filmTitle">Выберите фильм</span></div>
+        <div class="status" id="status">Готов к поиску</div>
+    </div>
+
 </div>
 
 <script>
 // =============================================
-// ГЛАВНАЯ ФУНКЦИЯ ПОИСКА
+// ЯДРО — ВСЯ ЛОГИКА РАБОТЫ
 // =============================================
-function search() {
-  const query = document.getElementById('searchInput').value.trim();
-  if (!query) {
-    alert('Введите название фильма');
-    return;
-  }
 
-  // Формируем URL для iframe.cloud
-  const searchUrl = `https://iframe.cloud/search?q=${encodeURIComponent(query)}`;
-  
-  const iframe = document.getElementById('player');
-  const placeholder = document.getElementById('placeholder');
-  
-  // Показываем iframe, скрываем плейсхолдер
-  iframe.style.display = 'block';
-  placeholder.style.display = 'none';
-  
-  // Загружаем поиск
-  iframe.src = searchUrl;
-  
-  // Обновляем информацию
-  document.getElementById('filmTitle').textContent = `«${query}»`;
-  document.getElementById('status').textContent = `🔍 Поиск на iframe.cloud...`;
-  
-  // Когда iframe загрузится
-  iframe.onload = function() {
-    document.getElementById('status').textContent = `✅ Результаты поиска «${query}»`;
-  };
+// ===== ПОИСК =====
+function search() {
+    const query = document.getElementById('searchInput').value.trim();
+    if (!query) { alert('Введите название'); return; }
+    loadFilm(query);
 }
 
-// =============================================
-// ГОРЯЧАЯ КЛАВИША ENTER
-// =============================================
+// ===== БЫСТРЫЙ ПОИСК ПО КАТЕГОРИЯМ =====
+function quickSearch(category) {
+    document.getElementById('searchInput').value = category;
+    loadFilm(category);
+    
+    // Подсветка активной категории
+    document.querySelectorAll('.categories button').forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+}
+
+// ===== ЗАГРУЗКА ФИЛЬМА В ПЛЕЕР =====
+function loadFilm(query) {
+    const iframe = document.getElementById('player');
+    const placeholder = document.getElementById('placeholder');
+    const titleEl = document.getElementById('filmTitle');
+    const statusEl = document.getElementById('status');
+
+    // Формируем URL для iframe.cloud
+    const searchUrl = `https://iframe.cloud/search?q=${encodeURIComponent(query)}`;
+
+    // Показываем iframe, скрываем плейсхолдер
+    iframe.style.display = 'block';
+    placeholder.style.display = 'none';
+
+    // Загружаем
+    iframe.src = searchUrl;
+
+    // Обновляем информацию
+    titleEl.textContent = `«${query}»`;
+    statusEl.textContent = `🔍 Поиск на iframe.cloud...`;
+
+    // Когда iframe загрузится
+    iframe.onload = function() {
+        statusEl.textContent = `✅ Результаты поиска «${query}»`;
+    };
+}
+
+// ===== ГОРЯЧАЯ КЛАВИША ENTER =====
 document.getElementById('searchInput').addEventListener('keydown', function(e) {
-  if (e.key === 'Enter') search();
+    if (e.key === 'Enter') search();
 });
 
-// =============================================
-// ПРИВЕТСТВИЕ В КОНСОЛИ
-// =============================================
+// ===== ПРИВЕТСТВИЕ =====
 console.log('🎬 Кинотеатр загружен!');
-console.log('🔍 Введи название фильма и нажми "Найти"');
-console.log('📺 Все видео берутся с iframe.cloud');
+console.log('🔍 Введи название или выбери категорию');
+console.log('📺 Источник: iframe.cloud (клонирован)');
 </script>
+
 </body>
 </html>
