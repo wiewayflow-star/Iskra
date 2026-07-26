@@ -1,7 +1,10 @@
 {
   "functions": {
-    "api/*.js": {
+    "api/search.js": {
       "runtime": "nodejs18.x"
     }
-  }
+  },
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
 }
