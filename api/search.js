@@ -1,4 +1,4 @@
-// api/search.js
+// api/search.js — использует внутренний API Kinokong
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -15,64 +15,58 @@ export default async function handler(req, res) {
   }
 
   try {
-    // 1. Идём на kinokong.org через публичный прокси (чтобы обойти блокировки)
+    // Шаг 1: Ищем фильм через поиск Kinokong
     const searchUrl = `https://kinokong.org/search?q=${encodeURIComponent(query)}`;
-    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(searchUrl)}`;
-    
-    const response = await fetch(proxyUrl, {
-      headers: { 'User-Agent': 'Mozilla/5.0' }
+    const searchResponse = await fetch(searchUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      }
     });
 
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const html = await response.text();
+    if (!searchResponse.ok) throw new Error('Поиск не удался');
+    const html = await searchResponse.text();
 
-    // 2. Парсим ссылку на первый фильм
-    const filmLinkMatch = html.match(/<a[^>]+href="\/([^"]+)"[^>]*>.*?<\/a>/i);
-    if (!filmLinkMatch) return res.json([]);
-    
-    const filmSlug = filmLinkMatch[1];
-    const filmUrl = `https://kinokong.org/${filmSlug}`;
+    // Шаг 2: Вытаскиваем ID фильма из ссылки
+    // Ищем ссылку вида /film/12345-название
+    const idMatch = html.match(/href="\/film\/(\d+)-[^"]+"/);
+    if (!idMatch) return res.json([]);
+    const filmId = idMatch[1];
 
-    // 3. Идём на страницу фильма через прокси
-    const filmProxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(filmUrl)}`;
-    const filmResponse = await fetch(filmProxyUrl, {
-      headers: { 'User-Agent': 'Mozilla/5.0' }
+    // Шаг 3: Получаем данные фильма через внутренний API
+    const apiUrl = `https://kinokong.org/api/film/${filmId}`;
+    const apiResponse = await fetch(apiUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0',
+        'Accept': 'application/json'
+      }
     });
-    const filmHtml = await filmResponse.text();
 
-    // 4. Вытаскиваем данные
-    const titleMatch = filmHtml.match(/<h1[^>]*>([^<]+)<\/h1>/i);
-    const title = titleMatch ? titleMatch[1].trim() : query;
+    if (!apiResponse.ok) throw new Error('API не ответил');
+    const data = await apiResponse.json();
 
-    const posterMatch = filmHtml.match(/<img[^>]+src="([^"]+)"[^>]+class="poster"/i);
-    const poster = posterMatch ? posterMatch[1] : '';
-
-    const yearMatch = filmHtml.match(/(?:20\d{2}|19\d{2})/);
-    const year = yearMatch ? yearMatch[0] : '';
-
-    const descMatch = filmHtml.match(/<p[^>]*class="desc"[^>]*>([^<]+)<\/p>/i);
-    const description = descMatch ? descMatch[1].trim() : '';
-
-    // 5. Ищем прямую ссылку на видео (mp4 или m3u8)
-    const videoMatch = filmHtml.match(/(https?:\/\/[^\s"']+\.(mp4|m3u8)[^\s"']*)/i);
-    const videoUrl = videoMatch ? videoMatch[1] : '';
+    // Шаг 4: Парсим ответ API
+    // У Kinokong API возвращает примерно такую структуру:
+    // { film: { title, year, poster, description }, video: { url: '...' } }
+    const film = data.film || data;
+    const videoUrl = data.video?.url || data.url || data.stream || '';
 
     if (!videoUrl) {
-      // Если не нашли — ищем через iframe-плеер (запасной вариант)
-      const iframeMatch = filmHtml.match(/<iframe[^>]+src="([^"]+)"/i);
-      const iframeUrl = iframeMatch ? iframeMatch[1] : '';
-      if (iframeUrl) {
+      // Если прямой ссылки нет — ищем в плеере
+      const playerMatch = html.match(/<iframe[^>]+src="([^"]+)"[^>]*>/i);
+      if (playerMatch) {
+        const iframeSrc = playerMatch[1];
         // Пробуем вытащить ссылку из iframe
-        const iframeProxy = `https://api.allorigins.win/raw?url=${encodeURIComponent(iframeUrl)}`;
-        const iframeResponse = await fetch(iframeProxy);
+        const iframeResponse = await fetch(iframeSrc, {
+          headers: { 'User-Agent': 'Mozilla/5.0' }
+        });
         const iframeHtml = await iframeResponse.text();
         const videoInIframe = iframeHtml.match(/(https?:\/\/[^\s"']+\.(mp4|m3u8)[^\s"']*)/i);
         if (videoInIframe) {
           return res.json([{
-            title,
-            year,
-            poster,
-            description,
+            title: film.title || query,
+            year: film.year || '',
+            poster: film.poster || '',
+            description: film.description || '',
             videoUrl: videoInIframe[1],
             seeders: 999
           }]);
@@ -81,18 +75,18 @@ export default async function handler(req, res) {
       return res.json([]);
     }
 
-    // 6. Возвращаем результат
+    // Шаг 5: Возвращаем результат
     res.json([{
-      title,
-      year,
-      poster,
-      description,
-      videoUrl,
+      title: film.title || query,
+      year: film.year || '',
+      poster: film.poster || '',
+      description: film.description || '',
+      videoUrl: videoUrl,
       seeders: 999
     }]);
 
   } catch (error) {
-    console.error('Ошибка парсинга:', error);
+    console.error('Ошибка:', error);
     res.json([]);
   }
 }
