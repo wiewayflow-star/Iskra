@@ -3,12 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Кинотеатр</title>
+  <title>🎬 Кинотеатр — бесплатно и без рекламы</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: Arial, sans-serif; background: #0a0a0a; color: #fff; min-height: 100vh; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #0a0a0a;
+      color: #fff;
+      min-height: 100vh;
+    }
     
-    .header { 
+    /* ===== ШАПКА ===== */
+    .header {
       background: linear-gradient(135deg, #1a1a2e, #16213e);
       padding: 20px 30px;
       display: flex;
@@ -17,40 +23,65 @@
       flex-wrap: wrap;
       gap: 15px;
       border-bottom: 2px solid #ff6600;
+      position: sticky;
+      top: 0;
+      z-index: 100;
     }
-    .header h1 { font-size: 24px; color: #ff6600; }
+    .header h1 {
+      font-size: 26px;
+      color: #ff6600;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
     .header h1 span { color: #fff; font-weight: 300; }
-    .search-box { display: flex; gap: 10px; flex-wrap: wrap; }
-    .search-box input { 
-      padding: 10px 16px; 
-      width: 280px; 
-      border: 1px solid #333; 
-      background: #1a1a1a; 
-      color: #fff; 
-      border-radius: 6px; 
-      font-size: 14px; 
-    }
-    .search-box input:focus { outline: none; border-color: #ff6600; }
-    .search-box button { 
-      padding: 10px 24px; 
-      background: #ff6600; 
-      color: #fff; 
-      border: none; 
-      border-radius: 6px; 
-      font-size: 14px; 
-      cursor: pointer; 
+    .header .badge {
+      font-size: 12px;
+      background: #ff6600;
+      color: #fff;
+      padding: 2px 12px;
+      border-radius: 20px;
       font-weight: bold;
     }
-    .search-box button:hover { background: #ff5500; }
+    .search-box { display: flex; gap: 10px; flex-wrap: wrap; }
+    .search-box input {
+      padding: 10px 16px;
+      width: 300px;
+      border: 1px solid #333;
+      background: #1a1a1a;
+      color: #fff;
+      border-radius: 6px;
+      font-size: 14px;
+      transition: border 0.3s;
+    }
+    .search-box input:focus {
+      outline: none;
+      border-color: #ff6600;
+      background: #222;
+    }
+    .search-box button {
+      padding: 10px 24px;
+      background: #ff6600;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background 0.2s;
+    }
+    .search-box button:hover { background: #e65c00; }
 
+    /* ===== ПЛЕЕР ===== */
     #player-container {
       width: 100%;
       max-width: 1100px;
       margin: 20px auto;
       background: #000;
-      border-radius: 8px;
+      border-radius: 10px;
       overflow: hidden;
-      box-shadow: 0 0 40px rgba(255, 102, 0, 0.1);
+      box-shadow: 0 0 50px rgba(255, 102, 0, 0.05);
+      min-height: 500px;
     }
     #player-container iframe {
       width: 100%;
@@ -59,10 +90,11 @@
       display: block;
     }
 
+    /* ===== ИНФОРМАЦИОННАЯ ПАНЕЛЬ ===== */
     .info-bar {
-      padding: 15px 20px;
+      padding: 15px 25px;
       background: #1a1a1a;
-      border-top: 1px solid #333;
+      border-top: 1px solid #2a2a2a;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -73,57 +105,42 @@
     .info-bar .title span { color: #ff6600; }
     .info-bar .status { color: #888; font-size: 14px; }
 
-    .sources {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      padding: 10px 20px;
-      background: #111;
-      border-top: 1px solid #222;
-    }
-    .sources button {
-      padding: 6px 14px;
-      background: #222;
-      color: #aaa;
-      border: 1px solid #333;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 12px;
-      transition: all 0.2s;
-    }
-    .sources button:hover, .sources button.active {
-      background: #ff6600;
-      color: #fff;
-      border-color: #ff6600;
-    }
-
+    /* ===== ПЛЕЙСХОЛДЕР ===== */
     .placeholder {
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
       height: 600px;
-      color: #444;
-      font-size: 20px;
-      flex-direction: column;
+      color: #555;
+      font-size: 18px;
       gap: 15px;
+      text-align: center;
+      padding: 20px;
     }
-    .placeholder .icon { font-size: 60px; }
+    .placeholder .icon { font-size: 70px; }
+    .placeholder .sub { font-size: 14px; color: #444; }
 
+    /* ===== АДАПТИВ ===== */
     @media (max-width: 700px) {
       .header { flex-direction: column; align-items: stretch; }
       .search-box input { width: 100%; }
       #player-container iframe { height: 300px; }
       .placeholder { height: 300px; }
+      .info-bar { flex-direction: column; align-items: flex-start; }
     }
   </style>
 </head>
 <body>
 
 <div class="header">
-  <h1>🎬 <span>Кинотеатр</span></h1>
+  <h1>
+    🎬 <span>Кинотеатр</span>
+    <span class="badge">🔒 Без рекламы</span>
+  </h1>
   <div class="search-box">
-    <input id="searchInput" placeholder="Название фильма..." />
-    <button onclick="search()">Найти</button>
+    <input id="searchInput" placeholder="Название фильма или сериала..." />
+    <button onclick="search()">🔍 Найти</button>
   </div>
 </div>
 
@@ -131,17 +148,9 @@
   <div class="placeholder" id="placeholder">
     <div class="icon">🎥</div>
     <div>Введите название и нажмите «Найти»</div>
-    <div style="font-size:14px;color:#666;">Выберите источник ниже</div>
+    <div class="sub">Бесплатные фильмы и сериалы в HD качестве</div>
   </div>
   <iframe id="player" src="" allowfullscreen style="display:none;"></iframe>
-</div>
-
-<div class="sources" id="sourcesBar">
-  <button class="active" onclick="setSource('kinokong')">Kinokong</button>
-  <button onclick="setSource('seasonvar')">Seasonvar</button>
-  <button onclick="setSource('rezka')">Rezka</button>
-  <button onclick="setSource('kinogo')">Kinogo</button>
-  <button onclick="setSource('hdrezka')">HDRezka</button>
 </div>
 
 <div class="info-bar">
@@ -151,56 +160,17 @@
 
 <script>
 // =============================================
-// НАСТРОЙКИ
-// =============================================
-let currentSource = 'kinokong';
-
-const SITES = {
-  kinokong: {
-    name: 'Kinokong',
-    search: (q) => `https://kinokong.org/search?q=${encodeURIComponent(q)}`
-  },
-  seasonvar: {
-    name: 'Seasonvar',
-    search: (q) => `https://seasonvar.ru/search/?q=${encodeURIComponent(q)}`
-  },
-  rezka: {
-    name: 'Rezka',
-    search: (q) => `https://rezka.ag/search/?do=search&subaction=search&q=${encodeURIComponent(q)}`
-  },
-  kinogo: {
-    name: 'Kinogo',
-    search: (q) => `https://kinogo.biz/search/${encodeURIComponent(q)}`
-  },
-  hdrezka: {
-    name: 'HDRezka',
-    search: (q) => `https://hdrezka.ag/search/?do=search&subaction=search&q=${encodeURIComponent(q)}`
-  }
-};
-
-// =============================================
-// ВЫБОР ИСТОЧНИКА
-// =============================================
-function setSource(name) {
-  currentSource = name;
-  document.querySelectorAll('.sources button').forEach(btn => btn.classList.remove('active'));
-  document.querySelector(`.sources button[onclick="setSource('${name}')"]`).classList.add('active');
-  document.getElementById('status').textContent = `🔍 Источник: ${SITES[name].name}`;
-  
-  // Если уже был поиск — перезапускаем
-  const query = document.getElementById('searchInput').value.trim();
-  if (query) search();
-}
-
-// =============================================
-// ПОИСК
+// ГЛАВНАЯ ФУНКЦИЯ ПОИСКА
 // =============================================
 function search() {
   const query = document.getElementById('searchInput').value.trim();
-  if (!query) { alert('Введите название'); return; }
+  if (!query) {
+    alert('Введите название фильма');
+    return;
+  }
 
-  const site = SITES[currentSource];
-  const searchUrl = site.search(query);
+  // Формируем URL для iframe.cloud
+  const searchUrl = `https://iframe.cloud/search?q=${encodeURIComponent(query)}`;
   
   const iframe = document.getElementById('player');
   const placeholder = document.getElementById('placeholder');
@@ -209,15 +179,16 @@ function search() {
   iframe.style.display = 'block';
   placeholder.style.display = 'none';
   
-  // Вставляем поиск
+  // Загружаем поиск
   iframe.src = searchUrl;
   
-  document.getElementById('filmTitle').textContent = `«${query}» (поиск на ${site.name})`;
-  document.getElementById('status').textContent = `🔍 Поиск на ${site.name}...`;
+  // Обновляем информацию
+  document.getElementById('filmTitle').textContent = `«${query}»`;
+  document.getElementById('status').textContent = `🔍 Поиск на iframe.cloud...`;
   
-  // При загрузке iframe
+  // Когда iframe загрузится
   iframe.onload = function() {
-    document.getElementById('status').textContent = `✅ Результаты поиска «${query}» на ${site.name}`;
+    document.getElementById('status').textContent = `✅ Результаты поиска «${query}»`;
   };
 }
 
@@ -228,7 +199,12 @@ document.getElementById('searchInput').addEventListener('keydown', function(e) {
   if (e.key === 'Enter') search();
 });
 
-console.log('✅ Кинотеатр загружен. Выбери источник и введи название.');
+// =============================================
+// ПРИВЕТСТВИЕ В КОНСОЛИ
+// =============================================
+console.log('🎬 Кинотеатр загружен!');
+console.log('🔍 Введи название фильма и нажми "Найти"');
+console.log('📺 Все видео берутся с iframe.cloud');
 </script>
 </body>
 </html>
