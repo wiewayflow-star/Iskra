@@ -1,53 +1,69 @@
-// api/search.js — парсинг видео с пиратских сайтов
+// api/search.js — использует публичный агрегатор
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
   const query = req.query.q;
-  if (!query) return res.status(400).json({ error: 'Введите название' });
+  if (!query) {
+    return res.status(400).json({ error: 'Введите название' });
+  }
 
   try {
-    // Идём на kinokong.org, ищем фильм
-    const searchUrl = `https://kinokong.org/search?q=${encodeURIComponent(query)}`;
-    const response = await fetch(searchUrl, {
-      headers: { 'User-Agent': 'Mozilla/5.0' }
-    });
-    const html = await response.text();
+    // Используем публичный API для поиска фильмов
+    // Этот API берёт данные с разных пиратских сайтов
+    const response = await fetch(
+      `https://videocdn.tv/api/search?q=${encodeURIComponent(query)}&type=all`,
+      { headers: { 'User-Agent': 'Mozilla/5.0' } }
+    );
 
-    // Вытаскиваем первую ссылку на фильм (простой парсинг)
-    const match = html.match(/<a href="\/([^"]+)"[^>]*>.*?<\/a>/i);
-    if (!match) return res.json([]);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
 
-    const filmSlug = match[1];
-    const filmUrl = `https://kinokong.org/${filmSlug}`;
-    
-    // Идём на страницу фильма
-    const filmResponse = await fetch(filmUrl, {
-      headers: { 'User-Agent': 'Mozilla/5.0' }
-    });
-    const filmHtml = await filmResponse.text();
+    const data = await response.json();
 
-    // Ищем ссылку на видео (mp4 или m3u8)
-    const videoMatch = filmHtml.match(/(https?:\/\/[^\s"']+\.(mp4|m3u8)[^\s"']*)/i);
-    if (!videoMatch) return res.json([]);
+    // Преобразуем в нужный формат
+    if (data && data.results && data.results.length > 0) {
+      const results = data.results.map(item => ({
+        title: item.title || 'Без названия',
+        year: item.year || '',
+        poster: item.poster || '',
+        videoUrl: item.stream || item.url || item.link || '',
+        seeders: 999
+      })).filter(item => item.videoUrl);
 
-    const videoUrl = videoMatch[1];
+      return res.json(results);
+    }
 
-    // Вытаскиваем название и постер (если есть)
-    const titleMatch = filmHtml.match(/<h1[^>]*>([^<]+)<\/h1>/i);
-    const title = titleMatch ? titleMatch[1].trim() : query;
-    
-    const posterMatch = filmHtml.match(/<img[^>]+src="([^"]+)"[^>]+class="poster"/i);
-    const poster = posterMatch ? posterMatch[1] : '';
+    // Если API не сработал — пробуем запасной источник
+    const backupResponse = await fetch(
+      `https://kinobase.org/api/search?q=${encodeURIComponent(query)}`,
+      { headers: { 'User-Agent': 'Mozilla/5.0' } }
+    );
 
-    res.json([{
-      title: title,
-      year: '',
-      poster: poster,
-      videoUrl: videoUrl,
-      seeders: 999
-    }]);
+    if (backupResponse.ok) {
+      const backupData = await backupResponse.json();
+      if (backupData && backupData.length > 0) {
+        const results = backupData.map(item => ({
+          title: item.title || 'Без названия',
+          year: item.year || '',
+          poster: item.poster || '',
+          videoUrl: item.video || item.url || '',
+          seeders: 999
+        })).filter(item => item.videoUrl);
+        return res.json(results);
+      }
+    }
 
+    res.json([]);
   } catch (error) {
-    console.error('Ошибка парсинга:', error);
+    console.error('Ошибка поиска:', error);
     res.json([]);
   }
 }
