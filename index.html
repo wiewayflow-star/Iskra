@@ -1,169 +1,374 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🎬 Мой Кинотеатр</title>
-    <!-- Подключаем стили, которые ты скачал -->
-    <link rel="stylesheet" href="css/cinema.css">
-    <style>
-        /* Дополнительные стили для маскировки */
-        .iframe-wrapper {
-            width: 100%;
-            height: 600px;
-            overflow: hidden;
-            border-radius: 12px;
-            background: #000;
-            position: relative;
-        }
-        .iframe-wrapper iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-            /* Смещаем так, чтобы скрыть шапку и меню iframe.cloud */
-            margin-top: -80px; /* Скрываем верхнюю часть */
-            clip-path: inset(80px 0px 0px 0px);
-        }
-        /* Убираем всё лишнее на iframe.cloud с помощью CSS (работает в некоторых браузерах) */
-        .iframe-wrapper iframe body {
-            margin: 0;
-        }
-        @media (max-width: 768px) {
-            .iframe-wrapper {
-                height: 300px;
-            }
-            .iframe-wrapper iframe {
-                margin-top: -60px;
-                clip-path: inset(60px 0px 0px 0px);
-            }
-        }
-        /* Остальные стили твоего дизайна уже есть в cinema.css */
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🎬 Мой Кинотеатр</title>
+  <style>
+    /* ===== ВАШ ДИЗАЙН ===== */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #0a0a0f;
+      color: #fff;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 15px;
+      margin-bottom: 30px;
+      background: #12121a;
+      padding: 15px 25px;
+      border-radius: 12px;
+      border: 1px solid #2a2a2a;
+    }
+    .logo {
+      font-size: 28px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #ff6b00, #ff4500);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .logo span { -webkit-text-fill-color: #fff; font-weight: 300; }
+    .search-box {
+      display: flex;
+      gap: 10px;
+      flex: 1;
+      max-width: 500px;
+    }
+    .search-box input {
+      flex: 1;
+      padding: 12px 18px;
+      border: 1px solid #333;
+      background: #1a1a1a;
+      color: #fff;
+      border-radius: 8px;
+      font-size: 16px;
+      transition: 0.3s;
+    }
+    .search-box input:focus {
+      outline: none;
+      border-color: #ff4500;
+      box-shadow: 0 0 20px rgba(255, 69, 0, 0.1);
+    }
+    .search-box button {
+      padding: 12px 24px;
+      background: #ff4500;
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      font-weight: 700;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .search-box button:hover { background: #e63e00; }
+
+    .source-selector {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .source-btn {
+      padding: 8px 18px;
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 20px;
+      color: #aaa;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .source-btn.active {
+      background: #ff4500;
+      border-color: #ff4500;
+      color: #fff;
+    }
+    .source-btn:hover { border-color: #ff4500; }
+
+    #results {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 25px;
+      margin: 20px 0;
+    }
+    .movie-card {
+      background: #1a1a1a;
+      border-radius: 12px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      border: 1px solid #2a2a2a;
+    }
+    .movie-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 10px 30px rgba(255, 69, 0, 0.2);
+      border-color: #ff4500;
+    }
+    .movie-card img {
+      width: 100%;
+      height: 260px;
+      object-fit: cover;
+      background: #2a2a2a;
+    }
+    .movie-card .info {
+      padding: 12px;
+    }
+    .movie-card .info h3 {
+      font-size: 16px;
+      margin-bottom: 5px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .movie-card .info .year {
+      color: #888;
+      font-size: 14px;
+    }
+
+    #player-container {
+      margin-top: 30px;
+      background: #000;
+      border-radius: 12px;
+      overflow: hidden;
+      display: none;
+      position: relative;
+      padding-bottom: 56.25%; /* 16:9 */
+      height: 0;
+    }
+    #player-container iframe {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+    .loader {
+      text-align: center;
+      padding: 40px;
+      color: #aaa;
+    }
+    .loader .spinner {
+      display: inline-block;
+      width: 40px;
+      height: 40px;
+      border: 4px solid #333;
+      border-top-color: #ff4500;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .empty {
+      text-align: center;
+      padding: 40px;
+      color: #666;
+      font-size: 18px;
+    }
+    .status-msg {
+      padding: 15px;
+      background: #1a1a1a;
+      border-radius: 8px;
+      margin: 10px 0;
+      color: #aaa;
+      text-align: center;
+    }
+    @media (max-width: 600px) {
+      .header { flex-direction: column; align-items: stretch; }
+      .search-box { max-width: 100%; }
+      #results { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+    }
+  </style>
 </head>
 <body>
-    <!-- Шапка твоего сайта (из скачанного дизайна) -->
-    <header class="header header-centered">
-        <a href="index.html" class="logo">
-            <span class="logo-icon">▶</span>
-        </a>
-        <nav class="nav nav-centered">
-            <a href="#" class="nav-link active" data-tab="popular">Популярное</a>
-            <a href="#" class="nav-link" data-tab="top">Топ 250</a>
-            <a href="#" class="nav-link" data-tab="favorites">Избранное</a>
-        </nav>
-    </header>
 
-    <!-- Основной контент -->
-    <main class="main">
-        <!-- Поиск (твой дизайн) -->
-        <section class="hero" id="heroSection">
-            <div class="hero-content">
-                <div class="hero-search">
-                    <div class="hero-search-box">
-                        <span class="hero-search-icon">🔍</span>
-                        <input type="text" id="searchInput" placeholder="Найти фильм или сериал..." autocomplete="off">
-                        <div class="search-results" id="searchResults"></div>
-                    </div>
-                </div>
-                <h1 class="hero-title">Смотрите фильмы <span class="gradient-text">бесплатно</span></h1>
-                <p class="hero-subtitle">Огромная коллекция фильмов и сериалов в HD качестве</p>
-                <div class="hero-stats">
-                    <div class="stat"><span class="stat-value">50K+</span><span class="stat-label">Фильмов</span></div>
-                    <div class="stat"><span class="stat-value">1080p</span><span class="stat-label">Качество</span></div>
-                    <div class="stat"><span class="stat-value">0₽</span><span class="stat-label">Бесплатно</span></div>
-                </div>
-            </div>
-        </section>
+  <div class="header">
+    <div class="logo">🎬 <span>Кинотеатр</span></div>
+    <div class="search-box">
+      <input id="searchInput" placeholder="Название фильма..." />
+      <button id="searchBtn">Найти</button>
+    </div>
+  </div>
 
-        <!-- Контейнер для iframe -->
-        <section class="movies-section" id="moviesSection">
-            <div class="section-header">
-                <h2 class="section-title" id="sectionTitle">🔥 Популярные фильмы</h2>
-            </div>
-            <div class="iframe-wrapper">
-                <iframe id="playerFrame" src="https://iframe.cloud" allowfullscreen></iframe>
-            </div>
-        </section>
-    </main>
+  <div class="source-selector">
+    <button class="source-btn active" data-source="kodik">Kodik</button>
+    <button class="source-btn" data-source="alloha">Alloha</button>
+    <button class="source-btn" data-source="hdvb">HDVB</button>
+  </div>
 
-    <!-- Футер -->
-    <footer class="footer">
-        <p>© 2026 Мой Кинотеатр</p>
-    </footer>
+  <div id="results"></div>
 
-    <!-- JavaScript для поиска -->
-    <script>
-        // =============================================
-        // ПОИСК
-        // =============================================
-        const searchInput = document.getElementById('searchInput');
-        const playerFrame = document.getElementById('playerFrame');
-        const resultsContainer = document.getElementById('searchResults');
+  <div id="player-container">
+    <iframe id="playerFrame" allowfullscreen></iframe>
+  </div>
 
-        searchInput.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') {
-                const query = this.value.trim();
-                if (query.length >= 2) {
-                    // Открываем iframe с поиском на iframe.cloud
-                    const url = `https://iframe.cloud/search?q=${encodeURIComponent(query)}`;
-                    playerFrame.src = url;
-                    // Обновляем заголовок
-                    document.getElementById('sectionTitle').textContent = `🔍 Результаты поиска: "${query}"`;
-                    // Скрываем выпадающий список
-                    resultsContainer.innerHTML = '';
-                }
-            }
-        });
+  <script>
+    // =============================================
+    // КОНФИГУРАЦИЯ ИСТОЧНИКОВ
+    // =============================================
+    const SOURCES = {
+      kodik: {
+        name: 'Kodik',
+        search: async (query) => {
+          const url = `https://kodik.cc/api/search?q=${encodeURIComponent(query)}`;
+          const res = await fetch(url);
+          const data = await res.json();
+          if (!data.results) return [];
+          return data.results.map(item => ({
+            id: item.id,
+            title: item.title,
+            year: item.year,
+            poster: item.poster || item.poster_url || '',
+            iframe: item.iframe_src || `https://kodik.cc/serial/${item.id}/720p`
+          }));
+        }
+      },
+      alloha: {
+        name: 'Alloha',
+        search: async (query) => {
+          // Alloha не имеет публичного API, используем парсинг страницы поиска
+          const url = `https://alloha.tv/search/?q=${encodeURIComponent(query)}`;
+          const res = await fetch(url);
+          const html = await res.text();
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(html, 'text/html');
+          const items = doc.querySelectorAll('.movie-item');
+          return Array.from(items).map(el => {
+            const link = el.querySelector('a');
+            const id = link?.href?.split('/').pop() || '';
+            const title = link?.textContent?.trim() || '';
+            const poster = el.querySelector('img')?.src || '';
+            return {
+              id,
+              title,
+              year: '',
+              poster,
+              iframe: `https://alloha.tv/player/${id}?quality=1080`
+            };
+          }).filter(item => item.id);
+        }
+      },
+      hdvb: {
+        name: 'HDVB',
+        search: async (query) => {
+          // HDVB (бывший HDVideoBox) также требует парсинга
+          const url = `https://hdvb.cc/search/?q=${encodeURIComponent(query)}`;
+          const res = await fetch(url);
+          const html = await res.text();
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(html, 'text/html');
+          const items = doc.querySelectorAll('.search-result');
+          return Array.from(items).map(el => {
+            const link = el.querySelector('a');
+            const id = link?.href?.split('/').pop() || '';
+            const title = link?.textContent?.trim() || '';
+            const poster = el.querySelector('img')?.src || '';
+            return {
+              id,
+              title,
+              year: '',
+              poster,
+              iframe: `https://hdvb.cc/embed/${id}`
+            };
+          }).filter(item => item.id);
+        }
+      }
+    };
 
-        // Автодополнение (как на iframe.cloud)
-        searchInput.addEventListener('input', function() {
-            const query = this.value.trim();
-            if (query.length < 2) {
-                resultsContainer.innerHTML = '';
-                return;
-            }
-            // Здесь можно было бы сделать запрос к API для автодополнения,
-            // но мы просто показываем сообщение о поиске
-            resultsContainer.innerHTML = `
-                <div class="search-loading">Поиск "${query}"...</div>
-            `;
-            // Через секунду убираем (имитация)
-            clearTimeout(this._timeout);
-            this._timeout = setTimeout(() => {
-                resultsContainer.innerHTML = `
-                    <div class="search-item" onclick="document.getElementById('searchInput').value='${query}'; document.getElementById('searchInput').dispatchEvent(new KeyboardEvent('keydown', {key:'Enter'}));">
-                        <span class="search-item-title">Найти "${query}"</span>
-                    </div>
-                `;
-            }, 300);
-        });
+    let currentSource = 'kodik';
+    let currentResults = [];
 
-        // Клик по результату автодополнения
-        document.addEventListener('click', function(e) {
-            if (e.target.closest('.search-item')) {
-                // уже обработано в onclick
-            }
-        });
+    // =============================================
+    // ВЫБОР ИСТОЧНИКА
+    // =============================================
+    document.querySelectorAll('.source-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        document.querySelectorAll('.source-btn').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        currentSource = this.dataset.source;
+        const query = document.getElementById('searchInput').value.trim();
+        if (query) search(query);
+      });
+    });
 
-        // Табы (популярное, топ, избранное)
-        document.querySelectorAll('.nav-link').forEach(link => {
-            link.addEventListener('click', function(e) {
-                e.preventDefault();
-                document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-                this.classList.add('active');
-                const tab = this.dataset.tab;
-                let url = 'https://iframe.cloud';
-                if (tab === 'popular') url = 'https://iframe.cloud';
-                else if (tab === 'top') url = 'https://iframe.cloud/top';
-                else if (tab === 'favorites') url = 'https://iframe.cloud/favorites';
-                playerFrame.src = url;
-                document.getElementById('sectionTitle').textContent = this.textContent;
-            });
-        });
+    // =============================================
+    // ПОИСК
+    // =============================================
+    async function search(query) {
+      const resultsContainer = document.getElementById('results');
+      resultsContainer.innerHTML = `<div class="loader"><div class="spinner"></div><p>Поиск на ${SOURCES[currentSource].name}...</p></div>`;
 
-        // При загрузке страницы показываем популярное
-        playerFrame.src = 'https://iframe.cloud';
-        console.log('🎬 Кинотеатр загружен!');
-    </script>
+      try {
+        const source = SOURCES[currentSource];
+        const results = await source.search(query);
+        currentResults = results;
+        renderResults(results);
+      } catch (error) {
+        console.error('Ошибка поиска:', error);
+        resultsContainer.innerHTML = `<div class="empty">❌ Ошибка загрузки. Попробуйте другой источник.</div>`;
+      }
+    }
+
+    // =============================================
+    // ОТОБРАЖЕНИЕ РЕЗУЛЬТАТОВ
+    // =============================================
+    function renderResults(results) {
+      const container = document.getElementById('results');
+      if (!results || results.length === 0) {
+        container.innerHTML = `<div class="empty">😕 Ничего не найдено</div>`;
+        return;
+      }
+
+      container.innerHTML = results.map(item => `
+        <div class="movie-card" onclick="playMovie('${item.iframe}', '${item.title}')">
+          <img src="${item.poster || 'https://placehold.co/180x260/333/fff?text=Нет+постера'}" 
+               onerror="this.src='https://placehold.co/180x260/333/fff?text=Нет+постера'" 
+               alt="${item.title}" loading="lazy">
+          <div class="info">
+            <h3>${item.title}</h3>
+            <span class="year">${item.year || ''}</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // =============================================
+    // ВОСПРОИЗВЕДЕНИЕ (IFRAME)
+    // =============================================
+    function playMovie(iframeSrc, title) {
+      const container = document.getElementById('player-container');
+      const frame = document.getElementById('playerFrame');
+      frame.src = iframeSrc;
+      container.style.display = 'block';
+      // Прокручиваем к плееру
+      container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // Показываем сообщение в заголовке
+      document.querySelector('.logo span').textContent = `▶ ${title}`;
+    }
+
+    // =============================================
+    // ОБРАБОТЧИКИ СОБЫТИЙ
+    // =============================================
+    document.getElementById('searchBtn').addEventListener('click', function() {
+      const query = document.getElementById('searchInput').value.trim();
+      if (query.length >= 2) search(query);
+    });
+
+    document.getElementById('searchInput').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        const query = this.value.trim();
+        if (query.length >= 2) search(query);
+      }
+    });
+
+    // =============================================
+    // ПРИВЕТСТВИЕ
+    // =============================================
+    console.log('🎬 Кинотеатр загружен. Введите название и нажмите "Найти".');
+    console.log('Источники: Kodik (основной), Alloha, HDVB (запасные)');
+  </script>
 </body>
 </html>
