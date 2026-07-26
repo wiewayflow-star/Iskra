@@ -1,4 +1,4 @@
-// api/search.js
+// api/search.js — финальная версия
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -14,7 +14,6 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Введите название' });
   }
 
-  // Проверенные рабочие трекеры
   const trackers = [
     'udp://tracker.opentrackr.org:1337/announce',
     'udp://tracker.coppersurfer.tk:6969/announce',
@@ -26,65 +25,47 @@ export default async function handler(req, res) {
     'wss://tracker.openwebtorrent.com'
   ];
 
-  const sources = [
-    {
-      name: 'Torrents-CSV',
-      url: `https://torrents-csv.com/service/search?q=${encodeURIComponent(query)}&size=50`,
-      parser: (data) => {
-        if (!data.torrents || !Array.isArray(data.torrents)) return [];
-        return data.torrents.map(item => {
-          const trackerStr = trackers.map(t => `&tr=${encodeURIComponent(t)}`).join('');
-          return {
-            title: item.name || 'Без названия',
-            year: item.created_unix ? new Date(item.created_unix * 1000).getFullYear() : '',
-            poster: '',
-            magnet: `magnet:?xt=urn:btih:${item.infohash}${trackerStr}`,
-            quality: item.quality || 'unknown',
-            seeders: item.seeders || 0
-          };
-        });
-      }
-    },
-    {
-      name: 'TorAPI (запасной)',
-      url: `https://torapi.vercel.app/api/search?q=${encodeURIComponent(query)}&provider=all`,
-      parser: (data) => {
-        if (!Array.isArray(data)) return [];
-        return data.filter(item => item.magnet).map(item => ({
-          title: item.title || 'Без названия',
-          year: item.year || '',
-          poster: item.poster || '',
-          magnet: item.magnet,
+  try {
+    // Только один источник — Torrents-CSV, он самый надёжный
+    const response = await fetch(
+      `https://torrents-csv.com/service/search?q=${encodeURIComponent(query)}&size=50`,
+      { headers: { 'User-Agent': 'Mozilla/5.0' } }
+    );
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+    if (!data.torrents || !Array.isArray(data.torrents)) {
+      return res.json([]);
+    }
+
+    // Преобразуем и фильтруем
+    let results = data.torrents
+      .filter(item => item.seeders > 0) // Только с сидами
+      .map(item => {
+        const trackerStr = trackers.map(t => `&tr=${encodeURIComponent(t)}`).join('');
+        return {
+          title: item.name || 'Без названия',
+          year: item.created_unix ? new Date(item.created_unix * 1000).getFullYear() : '',
+          poster: '',
+          magnet: `magnet:?xt=urn:btih:${item.infohash}${trackerStr}`,
           quality: item.quality || 'unknown',
-          seeders: item.seeders || 0
-        }));
-      }
-    }
-  ];
+          seeders: item.seeders || 0,
+          size: item.size_bytes || 0
+        };
+      })
+      .sort((a, b) => b.seeders - a.seeders); // Сначала с большим количеством сидов
 
-  for (const source of sources) {
-    try {
-      console.log(`Пробуем источник: ${source.name}`);
-      const response = await fetch(source.url, {
-        headers: { 'User-Agent': 'Mozilla/5.0' }
-      });
+    // Ограничиваем до 20 результатов
+    results = results.slice(0, 20);
 
-      if (!response.ok) {
-        console.log(`${source.name} вернул ошибку ${response.status}`);
-        continue;
-      }
+    console.log(`✅ Найдено ${results.length} живых торрентов`);
+    res.json(results);
 
-      const data = await response.json();
-      const results = source.parser(data);
-
-      if (results && results.length > 0) {
-        console.log(`✅ Найдено ${results.length} результатов через ${source.name}`);
-        return res.json(results);
-      }
-    } catch (error) {
-      console.error(`❌ Ошибка с источником ${source.name}:`, error.message);
-    }
+  } catch (error) {
+    console.error('Ошибка поиска:', error);
+    res.json([]);
   }
-
-  res.json([]);
 }
