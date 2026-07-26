@@ -25,14 +25,13 @@
 <script src="https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js"></script>
 <script>
 // =====================================================
-// ТВОИ ДАННЫЕ УЖЕ ВСТАВЛЕНЫ
+// ТВОИ ДАННЫЕ
 // =====================================================
 const SUPABASE_URL = 'https://oitthmhpguzzaqzudris.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9pdHRobWhwZ3V6emFxenVkcmlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUwODYwMzQsImV4cCI6MjEwMDY2MjAzNH0.jbZKmwpXCloK_-FfeSRdkVT63wohS2_5CVYB2vGpBS0';
 // =====================================================
 
 let currentTorrent = null;
-let currentVideo = null;
 
 function getUserId() {
   let id = localStorage.getItem('userId');
@@ -43,39 +42,63 @@ function getUserId() {
   return id;
 }
 
-async function search() {
+// ===== ГЛОБАЛЬНАЯ ФУНКЦИЯ ПОИСКА =====
+window.search = async function() {
   const query = document.getElementById('searchInput').value.trim();
   if (!query) return alert('Введите название');
-  
-  const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
-  const data = await res.json();
-  
+
   const container = document.getElementById('results');
-  if (!data || data.length === 0) {
-    container.innerHTML = '<p>Ничего не найдено</p>';
+  container.innerHTML = '<p>⏳ Поиск...</p>';
+
+  try {
+    const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+    
+    // Проверяем статус ответа
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
+
+    const data = await res.json();
+
+    // Проверяем, что data — это массив
+    if (!Array.isArray(data)) {
+      throw new Error('API вернул не массив');
+    }
+
+    if (data.length === 0) {
+      container.innerHTML = '<p>😕 Ничего не найдено</p>';
+      return;
+    }
+
+    container.innerHTML = data.map(item => `
+      <div class="movie" onclick="playMovie('${item.magnet}', '${item.title}')">
+        <img src="${item.poster || 'https://via.placeholder.com/150x225?text=Нет+постера'}" 
+             onerror="this.src='https://via.placeholder.com/150x225?text=Нет+постера'">
+        <p><strong>${item.title || 'Без названия'}</strong><br>${item.year || ''}</p>
+      </div>
+    `).join('');
+
+  } catch (error) {
+    console.error('Ошибка поиска:', error);
+    container.innerHTML = '<p>❌ Ошибка поиска. Попробуйте позже.</p>';
+  }
+};
+
+// ===== ФУНКЦИЯ ПЛЕЕРА =====
+window.playMovie = async function(magnet, title) {
+  if (!magnet) {
+    alert('Нет magnet-ссылки для этого фильма');
     return;
   }
-  
-  container.innerHTML = data.map(item => `
-    <div class="movie" onclick="playMovie('${item.magnet}', '${item.title}')">
-      <img src="${item.poster || ''}" onerror="this.src='https://via.placeholder.com/150x225?text=Нет+постера'">
-      <p><strong>${item.title}</strong><br>${item.year || ''}</p>
-    </div>
-  `).join('');
-}
 
-async function playMovie(magnet, title) {
   const video = document.getElementById('player');
   const userId = getUserId();
-  const contentId = title;
-  
+
   if (currentTorrent) {
     currentTorrent.destroy();
     currentTorrent = null;
   }
-  
-  const savedTime = await loadProgress(userId, contentId);
-  
+
   const client = new WebTorrent();
   
   client.add(magnet, function(torrent) {
@@ -93,57 +116,9 @@ async function playMovie(magnet, title) {
     }
     
     file.createReadStream().pipe(video);
-    video.currentTime = savedTime || 0;
     video.play();
-    
-    video.ontimeupdate = function() {
-      const current = Math.floor(video.currentTime);
-      if (current % 5 === 0 && current > 0) {
-        saveProgress(userId, contentId, current);
-      }
-    };
-    
-    video.onpause = function() {
-      saveProgress(userId, contentId, Math.floor(video.currentTime));
-    };
   });
-}
-
-async function saveProgress(userId, contentId, timestamp) {
-  try {
-    await fetch(`${SUPABASE_URL}/rest/v1/user_progress`, {
-      method: 'POST',
-      headers: {
-        'apikey': SUPABASE_KEY,
-        'Content-Type': 'application/json',
-        'Prefer': 'resolution=merge-duplicates'
-      },
-      body: JSON.stringify({
-        user_id: userId,
-        content_id: contentId,
-        timestamp: timestamp,
-        updated_at: new Date().toISOString()
-      })
-    });
-  } catch (e) {
-    console.error('Ошибка сохранения прогресса:', e);
-  }
-}
-
-async function loadProgress(userId, contentId) {
-  try {
-    const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/user_progress?user_id=eq.${userId}&content_id=eq.${encodeURIComponent(contentId)}&select=timestamp`,
-      { headers: { 'apikey': SUPABASE_KEY } }
-    );
-    const data = await res.json();
-if (!Array.isArray(data)) {
-  console.error('Ошибка: API вернул не массив', data);
-  document.getElementById('results').innerHTML = '<p>Ошибка поиска. Попробуйте позже.</p>';
-  return;
-}
-data.map(item => ...)
-}
+};
 </script>
 </body>
 </html>
