@@ -1,6 +1,5 @@
 // api/search.js
 export default async function handler(req, res) {
-  // Разрешаем запросы с любого источника (CORS)
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -16,36 +15,50 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Запрос к Torrents-CSV API
+    // 1. Запрос к Torrents-CSV
     const response = await fetch(
       `https://torrents-csv.com/service/search?q=${encodeURIComponent(query)}&size=50`
     );
+
+    console.log('Torrents-CSV статус:', response.status);
 
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
     }
 
     const data = await response.json();
+    console.log('Torrents-CSV ответ:', data);
 
-    // Проверяем, что data — это массив
+    // 2. Проверяем, что data — это массив
     if (!Array.isArray(data)) {
-      throw new Error('API вернул не массив');
+      console.error('Ошибка: данные не массив', data);
+      return res.json([]);
     }
 
-    // Преобразуем в формат, который ждёт фронтенд
-    const results = data.map(item => ({
-      title: item.name || 'Без названия',
-      year: item.year || '',
-      poster: '', // У этого API нет постеров
-      magnet: item.magnet || `magnet:?xt=urn:btih:${item.infohash}`,
-      quality: item.quality || 'unknown',
-      seeders: item.seeders || 0
-    }));
+    // 3. Преобразуем в формат, который ждёт фронтенд
+    const results = data.map(item => {
+      // Формируем magnet-ссылку, если её нет
+      let magnet = item.magnet || '';
+      if (!magnet && item.infohash) {
+        magnet = `magnet:?xt=urn:btih:${item.infohash}&tr=udp://tracker.openbittorrent.com:80/announce`;
+      }
 
+      return {
+        title: item.name || item.title || 'Без названия',
+        year: item.year || (item.created_at ? new Date(item.created_at).getFullYear() : ''),
+        poster: '', // У Torrents-CSV нет постеров
+        magnet: magnet,
+        quality: item.quality || 'unknown',
+        seeders: item.seeders || 0
+      };
+    });
+
+    console.log('Результатов после парсинга:', results.length);
     res.json(results);
+
   } catch (error) {
-    console.error('Ошибка поиска:', error);
-    // ВАЖНО: всегда возвращаем массив, даже при ошибке
-    res.status(200).json([]); // ← пустой массив, чтобы фронтенд не падал
+    console.error('Ошибка в api/search:', error);
+    // ВСЕГДА возвращаем массив, даже при ошибке
+    res.status(200).json([]);
   }
 }
