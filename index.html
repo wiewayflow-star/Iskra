@@ -137,11 +137,12 @@ async function loadProgress(userId, contentId) {
       { headers: { 'apikey': SUPABASE_KEY } }
     );
     const data = await res.json();
-    return data.length > 0 ? data[0].timestamp : 0;
-  } catch (e) {
-    console.error('Ошибка загрузки прогресса:', e);
-    return 0;
-  }
+if (!Array.isArray(data)) {
+  console.error('Ошибка: API вернул не массив', data);
+  document.getElementById('results').innerHTML = '<p>Ошибка поиска. Попробуйте позже.</p>';
+  return;
+}
+data.map(item => ...)
 }
 </script>
 </body>
