@@ -1,4 +1,4 @@
-// api/search.js — с двумя источниками
+// api/search.js
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -14,25 +14,39 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Введите название' });
   }
 
-  // Пробуем источники по очереди
+  // Проверенные рабочие трекеры
+  const trackers = [
+    'udp://tracker.opentrackr.org:1337/announce',
+    'udp://tracker.coppersurfer.tk:6969/announce',
+    'udp://tracker.leechers-paradise.org:6969/announce',
+    'udp://explodie.org:6969/announce',
+    'udp://tracker.zer0day.to:1337/announce',
+    'udp://tracker.cyberia.is:6969/announce',
+    'wss://tracker.btorrent.xyz',
+    'wss://tracker.openwebtorrent.com'
+  ];
+
   const sources = [
     {
       name: 'Torrents-CSV',
       url: `https://torrents-csv.com/service/search?q=${encodeURIComponent(query)}&size=50`,
       parser: (data) => {
         if (!data.torrents || !Array.isArray(data.torrents)) return [];
-        return data.torrents.map(item => ({
-          title: item.name || 'Без названия',
-          year: item.created_unix ? new Date(item.created_unix * 1000).getFullYear() : '',
-          poster: '',
-          magnet: `magnet:?xt=urn:btih:${item.infohash}&tr=udp://tracker.openbittorrent.com:80/announce&tr=udp://tracker.coppersurfer.tk:6969/announce&tr=udp://tracker.leechers-paradise.org:6969/announce&tr=udp://explodie.org:6969/announce&tr=udp://tracker.zer0day.to:1337/announce&tr=udp://tracker.cyberia.is:6969/announce&tr=udp://tracker.tiny-vps.com:6969/announce&tr=udp://tracker.port443.xyz:6969/announce&tr=udp://open.demonii.com:1337/announce`,
-          quality: item.quality || 'unknown',
-          seeders: item.seeders || 0
-        }));
+        return data.torrents.map(item => {
+          const trackerStr = trackers.map(t => `&tr=${encodeURIComponent(t)}`).join('');
+          return {
+            title: item.name || 'Без названия',
+            year: item.created_unix ? new Date(item.created_unix * 1000).getFullYear() : '',
+            poster: '',
+            magnet: `magnet:?xt=urn:btih:${item.infohash}${trackerStr}`,
+            quality: item.quality || 'unknown',
+            seeders: item.seeders || 0
+          };
+        });
       }
     },
     {
-      name: 'TorAPI (альтернативный)',
+      name: 'TorAPI (запасной)',
       url: `https://torapi.vercel.app/api/search?q=${encodeURIComponent(query)}&provider=all`,
       parser: (data) => {
         if (!Array.isArray(data)) return [];
@@ -72,6 +86,5 @@ export default async function handler(req, res) {
     }
   }
 
-  // Если ни один источник не сработал
   res.json([]);
 }
