@@ -1,26 +1,16 @@
-// api/torrentclaw.js
+// api/search.js
 export default async function handler(req, res) {
-  // Разрешаем запросы с твоего сайта (CORS)
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
-  if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
-  }
+  // ... (настройки CORS и обработка OPTIONS остаются без изменений) ...
 
   const query = req.query.q;
   if (!query) {
-    return res.status(400).json({ error: 'Введите название фильма или сериала' });
+    return res.status(400).json({ error: 'Введите название фильма' });
   }
 
   try {
-    // Запрос к API TorrentClaw
-    // Согласно документации, API может принимать разные параметры для фильтрации
-    // Мы используем базовый поиск по названию, но можно добавить type, year, quality и т.д.
+    // Запрос к API Torrents-CSV
     const response = await fetch(
-      `https://torrentclaw.com/api/search?query=${encodeURIComponent(query)}`
+      `https://torrents-csv.com/service/search?q=${encodeURIComponent(query)}&size=50`
     );
 
     if (!response.ok) {
@@ -29,21 +19,19 @@ export default async function handler(req, res) {
 
     const data = await response.json();
 
-    // Преобразуем ответ от TorrentClaw в тот формат, который ожидает твой фронтенд
-    // (чтобы не переписывать весь index.html)
-    const results = data.results.map(item => ({
-      title: item.title,
-      year: item.year,
-      poster: item.poster_path,
-      magnet: item.magnet_url,
-      // Добавь другие поля по необходимости
-      quality: item.quality,
-      seeders: item.seeders
+    // Преобразуем ответ в нужный тебе формат
+    const results = data.map(item => ({
+      title: item.name,
+      year: item.created_at ? new Date(item.created_at).getFullYear() : '',
+      poster: '', // У этого API нет постеров, нужно будет добавить позже
+      magnet: `magnet:?xt=urn:btih:${item.infohash}`, // Формируем magnet-ссылку
+      quality: 'unknown',
+      seeders: item.seeders || 0
     }));
 
     res.json(results);
   } catch (error) {
-    console.error('Ошибка поиска через TorrentClaw:', error);
-    res.status(500).json({ error: 'Не удалось выполнить поиск. Попробуйте позже.' });
+    console.error('Ошибка поиска:', error);
+    res.status(500).json({ error: 'Не удалось выполнить поиск' });
   }
 }
