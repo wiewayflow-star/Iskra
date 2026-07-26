@@ -1,71 +1,53 @@
-// api/search.js — финальная версия
+// api/search.js — парсинг видео с пиратских сайтов
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
-  if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
-  }
-
   const query = req.query.q;
-  if (!query) {
-    return res.status(400).json({ error: 'Введите название' });
-  }
-
-  const trackers = [
-    'udp://tracker.opentrackr.org:1337/announce',
-    'udp://tracker.coppersurfer.tk:6969/announce',
-    'udp://tracker.leechers-paradise.org:6969/announce',
-    'udp://explodie.org:6969/announce',
-    'udp://tracker.zer0day.to:1337/announce',
-    'udp://tracker.cyberia.is:6969/announce',
-    'wss://tracker.btorrent.xyz',
-    'wss://tracker.openwebtorrent.com'
-  ];
+  if (!query) return res.status(400).json({ error: 'Введите название' });
 
   try {
-    // Только один источник — Torrents-CSV, он самый надёжный
-    const response = await fetch(
-      `https://torrents-csv.com/service/search?q=${encodeURIComponent(query)}&size=50`,
-      { headers: { 'User-Agent': 'Mozilla/5.0' } }
-    );
+    // Идём на kinokong.org, ищем фильм
+    const searchUrl = `https://kinokong.org/search?q=${encodeURIComponent(query)}`;
+    const response = await fetch(searchUrl, {
+      headers: { 'User-Agent': 'Mozilla/5.0' }
+    });
+    const html = await response.text();
 
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
+    // Вытаскиваем первую ссылку на фильм (простой парсинг)
+    const match = html.match(/<a href="\/([^"]+)"[^>]*>.*?<\/a>/i);
+    if (!match) return res.json([]);
 
-    const data = await response.json();
-    if (!data.torrents || !Array.isArray(data.torrents)) {
-      return res.json([]);
-    }
+    const filmSlug = match[1];
+    const filmUrl = `https://kinokong.org/${filmSlug}`;
+    
+    // Идём на страницу фильма
+    const filmResponse = await fetch(filmUrl, {
+      headers: { 'User-Agent': 'Mozilla/5.0' }
+    });
+    const filmHtml = await filmResponse.text();
 
-    // Преобразуем и фильтруем
-    let results = data.torrents
-      .filter(item => item.seeders > 0) // Только с сидами
-      .map(item => {
-        const trackerStr = trackers.map(t => `&tr=${encodeURIComponent(t)}`).join('');
-        return {
-          title: item.name || 'Без названия',
-          year: item.created_unix ? new Date(item.created_unix * 1000).getFullYear() : '',
-          poster: '',
-          magnet: `magnet:?xt=urn:btih:${item.infohash}${trackerStr}`,
-          quality: item.quality || 'unknown',
-          seeders: item.seeders || 0,
-          size: item.size_bytes || 0
-        };
-      })
-      .sort((a, b) => b.seeders - a.seeders); // Сначала с большим количеством сидов
+    // Ищем ссылку на видео (mp4 или m3u8)
+    const videoMatch = filmHtml.match(/(https?:\/\/[^\s"']+\.(mp4|m3u8)[^\s"']*)/i);
+    if (!videoMatch) return res.json([]);
 
-    // Ограничиваем до 20 результатов
-    results = results.slice(0, 20);
+    const videoUrl = videoMatch[1];
 
-    console.log(`✅ Найдено ${results.length} живых торрентов`);
-    res.json(results);
+    // Вытаскиваем название и постер (если есть)
+    const titleMatch = filmHtml.match(/<h1[^>]*>([^<]+)<\/h1>/i);
+    const title = titleMatch ? titleMatch[1].trim() : query;
+    
+    const posterMatch = filmHtml.match(/<img[^>]+src="([^"]+)"[^>]+class="poster"/i);
+    const poster = posterMatch ? posterMatch[1] : '';
+
+    res.json([{
+      title: title,
+      year: '',
+      poster: poster,
+      videoUrl: videoUrl,
+      seeders: 999
+    }]);
 
   } catch (error) {
-    console.error('Ошибка поиска:', error);
+    console.error('Ошибка парсинга:', error);
     res.json([]);
   }
 }
