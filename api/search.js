@@ -1,4 +1,4 @@
-// api/search.js
+// api/search.js — ищем iframe-плеер
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -15,29 +15,29 @@ export default async function handler(req, res) {
   }
 
   try {
-    // 1. Ищем фильм на kinokong.org
+    // Ищем на Kinokong
     const searchUrl = `https://kinokong.org/search?q=${encodeURIComponent(query)}`;
-    const searchResponse = await fetch(searchUrl, {
+    const response = await fetch(searchUrl, {
       headers: { 'User-Agent': 'Mozilla/5.0' }
     });
 
-    if (!searchResponse.ok) throw new Error('Поиск не удался');
-    const html = await searchResponse.text();
+    if (!response.ok) throw new Error('Поиск не удался');
+    const html = await response.text();
 
-    // 2. Находим ссылку на страницу первого фильма
+    // Ищем ссылку на страницу фильма
     const filmLinkMatch = html.match(/<a[^>]+href="\/(film\/\d+[^"]+)"[^>]*>/i);
     if (!filmLinkMatch) return res.json([]);
     
     const filmPath = filmLinkMatch[1];
     const filmUrl = `https://kinokong.org/${filmPath}`;
 
-    // 3. Загружаем страницу фильма
+    // Загружаем страницу фильма
     const filmResponse = await fetch(filmUrl, {
       headers: { 'User-Agent': 'Mozilla/5.0' }
     });
     const filmHtml = await filmResponse.text();
 
-    // 4. Парсим название, постер, описание
+    // Вытаскиваем название и постер
     const titleMatch = filmHtml.match(/<h1[^>]*>([^<]+)<\/h1>/i);
     const title = titleMatch ? titleMatch[1].trim() : query;
 
@@ -47,52 +47,23 @@ export default async function handler(req, res) {
     const yearMatch = filmHtml.match(/(?:20\d{2}|19\d{2})/);
     const year = yearMatch ? yearMatch[0] : '';
 
-    const descMatch = filmHtml.match(/<div[^>]*class="desc"[^>]*>([^<]+)<\/div>/i);
-    const description = descMatch ? descMatch[1].trim() : '';
-
-    // 5. НАХОДИМ ПРЯМУЮ ССЫЛКУ НА ВИДЕО (без рекламы!)
-    // Ищем в коде страницы ссылку на .mp4 или .m3u8
-    let videoUrl = '';
-    
-    // Сначала ищем в iframe плеера
+    // Ищем iframe-плеер
     const iframeMatch = filmHtml.match(/<iframe[^>]+src="([^"]+)"[^>]*>/i);
-    if (iframeMatch) {
-      const iframeSrc = iframeMatch[1];
-      // Загружаем iframe, чтобы достать видео оттуда
-      const iframeResponse = await fetch(iframeSrc, {
-        headers: { 'User-Agent': 'Mozilla/5.0' }
-      });
-      const iframeHtml = await iframeResponse.text();
-      const videoInIframe = iframeHtml.match(/(https?:\/\/[^\s"']+\.(mp4|m3u8)[^\s"']*)/i);
-      if (videoInIframe) {
-        videoUrl = videoInIframe[1];
-      }
-    }
+    if (!iframeMatch) return res.json([]);
+    
+    const iframeSrc = iframeMatch[1];
 
-    // Если в iframe не нашли — ищем прямо в HTML страницы
-    if (!videoUrl) {
-      const directVideo = filmHtml.match(/(https?:\/\/[^\s"']+\.(mp4|m3u8)[^\s"']*)/i);
-      if (directVideo) {
-        videoUrl = directVideo[1];
-      }
-    }
-
-    if (!videoUrl) {
-      return res.json([]);
-    }
-
-    // 6. Возвращаем данные для твоего плеера
+    // Возвращаем ссылку на iframe
     res.json([{
       title: title,
       year: year,
       poster: poster,
-      description: description,
-      videoUrl: videoUrl,  // ← чистая ссылка на видео!
+      videoUrl: iframeSrc,  // ← это ссылка на iframe-плеер
       seeders: 999
     }]);
 
   } catch (error) {
-    console.error('Ошибка парсинга:', error);
+    console.error('Ошибка:', error);
     res.json([]);
   }
 }
