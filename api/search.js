@@ -1,4 +1,4 @@
-// api/search.js
+// api/search.js — парсим lordfilm
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -15,24 +15,21 @@ export default async function handler(req, res) {
   }
 
   try {
-    // 1. Ищем на iframe.cloud
-    const searchUrl = `https://iframe.cloud/search?q=${encodeURIComponent(query)}`;
+    // 1. Поиск на lordfilm
+    const searchUrl = `https://lordfilm.work/search/?q=${encodeURIComponent(query)}`;
     const response = await fetch(searchUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-      }
+      headers: { 'User-Agent': 'Mozilla/5.0' }
     });
 
     if (!response.ok) throw new Error('Поиск не удался');
     const html = await response.text();
 
-    // 2. Ищем ссылку на страницу фильма (первый результат)
-    // На iframe.cloud ссылки на фильмы имеют вид /watch/...
-    const filmLinkMatch = html.match(/<a[^>]+href="\/(watch\/[^"]+)"[^>]*>/i);
+    // 2. Ищем ссылку на первый фильм (обычно /films/...)
+    const filmLinkMatch = html.match(/<a[^>]+href="\/(films\/[^"]+)"[^>]*>/i);
     if (!filmLinkMatch) return res.json([]);
 
     const filmPath = filmLinkMatch[1];
-    const filmUrl = `https://iframe.cloud/${filmPath}`;
+    const filmUrl = `https://lordfilm.work/${filmPath}`;
 
     // 3. Загружаем страницу фильма
     const filmResponse = await fetch(filmUrl, {
@@ -47,10 +44,10 @@ export default async function handler(req, res) {
     const posterMatch = filmHtml.match(/<img[^>]+src="([^"]+)"[^>]+class="poster"/i);
     const poster = posterMatch ? posterMatch[1] : '';
 
-    const descMatch = filmHtml.match(/<p[^>]*class="description"[^>]*>([^<]+)<\/p>/i);
+    const descMatch = filmHtml.match(/<div[^>]*class="description"[^>]*>([^<]+)<\/div>/i);
     const description = descMatch ? descMatch[1].trim() : '';
 
-    // 5. Ищем iframe-плеер внутри страницы
+    // 5. Ищем iframe плеера (часто бывает на lordfilm)
     const iframeMatch = filmHtml.match(/<iframe[^>]+src="([^"]+)"[^>]*>/i);
     if (!iframeMatch) return res.json([]);
 
@@ -62,16 +59,15 @@ export default async function handler(req, res) {
     });
     const iframeHtml = await iframeResponse.text();
 
-    // 7. Ищем видеофайл (mp4, m3u8)
+    // 7. Ищем mp4 или m3u8
     const videoMatch = iframeHtml.match(/(https?:\/\/[^\s"']+\.(mp4|m3u8)[^\s"']*)/i);
     if (!videoMatch) return res.json([]);
 
     const videoUrl = videoMatch[1];
 
-    // 8. Возвращаем данные для твоего плеера
     res.json([{
       title: title,
-      year: '', // на iframe.cloud нет года в явном виде
+      year: '',
       poster: poster,
       description: description,
       videoUrl: videoUrl,
@@ -79,7 +75,7 @@ export default async function handler(req, res) {
     }]);
 
   } catch (error) {
-    console.error('Ошибка парсинга:', error);
+    console.error('Ошибка парсинга lordfilm:', error);
     res.json([]);
   }
 }
