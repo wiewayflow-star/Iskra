@@ -5,118 +5,379 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Кинотеатр</title>
   <style>
-    body { font-family: Arial; padding: 20px; background: #111; color: #fff; }
-    input { padding: 10px; width: 300px; }
-    button { padding: 10px 20px; }
-    #results { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 20px; }
-    .movie { cursor: pointer; border: 1px solid #333; padding: 10px; width: 150px; }
-    .movie img { width: 100%; height: 225px; object-fit: cover; background: #333; }
-    video { width: 100%; max-width: 800px; margin-top: 20px; display: block; }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #111;
+      color: #fff;
+      min-height: 100vh;
+    }
+    h1 {
+      margin-bottom: 20px;
+      font-size: 28px;
+    }
+    .search-box {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 30px;
+      flex-wrap: wrap;
+    }
+    input {
+      padding: 12px 16px;
+      width: 350px;
+      max-width: 100%;
+      border: 1px solid #333;
+      background: #222;
+      color: #fff;
+      border-radius: 6px;
+      font-size: 16px;
+    }
+    input:focus {
+      outline: none;
+      border-color: #ff6600;
+    }
+    button {
+      padding: 12px 24px;
+      background: #ff6600;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:hover {
+      background: #ff5500;
+    }
+    #results {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      margin-top: 10px;
+      justify-content: flex-start;
+    }
+    .movie {
+      cursor: pointer;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 10px;
+      width: 160px;
+      background: #1a1a1a;
+      transition: transform 0.15s, border-color 0.15s;
+      text-align: center;
+    }
+    .movie:hover {
+      transform: scale(1.03);
+      border-color: #ff6600;
+    }
+    .movie img {
+      width: 100%;
+      height: 225px;
+      object-fit: cover;
+      border-radius: 4px;
+      background: #2a2a2a;
+    }
+    .movie p {
+      margin-top: 8px;
+      font-size: 14px;
+      line-height: 1.4;
+      word-break: break-word;
+    }
+    .movie .seeders {
+      font-size: 12px;
+      color: #888;
+    }
+    #player {
+      width: 100%;
+      max-width: 900px;
+      margin-top: 30px;
+      display: block;
+      background: #000;
+      border-radius: 8px;
+      min-height: 400px;
+    }
+    .status-msg {
+      padding: 20px;
+      text-align: center;
+      color: #aaa;
+      font-size: 18px;
+    }
+    .error-msg {
+      color: #ff4444;
+      text-align: center;
+      padding: 20px;
+    }
+    @media (max-width: 600px) {
+      .movie {
+        width: 140px;
+      }
+      .movie img {
+        height: 180px;
+      }
+      input {
+        width: 100%;
+      }
+    }
   </style>
 </head>
 <body>
 
 <h1>🎬 Кинотеатр</h1>
-<input id="searchInput" placeholder="Введите название фильма или сериала">
-<button onclick="search()">Найти</button>
+<div class="search-box">
+  <input id="searchInput" placeholder="Введите название фильма или сериала" />
+  <button onclick="search()">Найти</button>
+</div>
 <div id="results"></div>
 <video id="player" controls></video>
 
+<!-- WebTorrent -->
 <script src="https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js"></script>
+
 <script>
-// =====================================================
-// ТВОИ ДАННЫЕ
-// =====================================================
+// =============================================
+// ТВОИ ДАННЫЕ SUPABASE (для прогресса)
+// =============================================
 const SUPABASE_URL = 'https://oitthmhpguzzaqzudris.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9pdHRobWhwZ3V6emFxenVkcmlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUwODYwMzQsImV4cCI6MjEwMDY2MjAzNH0.jbZKmwpXCloK_-FfeSRdkVT63wohS2_5CVYB2vGpBS0';
-// =====================================================
 
 let currentTorrent = null;
+let currentClient = null;
 
+// =============================================
+// ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+// =============================================
 function getUserId() {
   let id = localStorage.getItem('userId');
   if (!id) {
-    id = crypto.randomUUID();
+    id = crypto.randomUUID ? crypto.randomUUID() : Date.now() + '-' + Math.random();
     localStorage.setItem('userId', id);
   }
   return id;
 }
 
-// ===== ПОИСК =====
+function showStatus(msg) {
+  const el = document.getElementById('results');
+  if (el) el.innerHTML = `<div class="status-msg">${msg}</div>`;
+}
+
+function showError(msg) {
+  const el = document.getElementById('results');
+  if (el) el.innerHTML = `<div class="error-msg">❌ ${msg}</div>`;
+}
+
+// =============================================
+// ПОИСК
+// =============================================
 window.search = async function() {
   const query = document.getElementById('searchInput').value.trim();
-  if (!query) return alert('Введите название');
+  if (!query) {
+    alert('Введите название');
+    return;
+  }
 
   const container = document.getElementById('results');
-  container.innerHTML = '<p>⏳ Поиск...</p>';
+  container.innerHTML = '<div class="status-msg">⏳ Поиск...</div>';
 
   try {
     const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
     const data = await res.json();
-    if (!Array.isArray(data)) throw new Error('API вернул не массив');
 
-    if (data.length === 0) {
-      container.innerHTML = '<p>😕 Ничего не найдено</p>';
+    if (!Array.isArray(data)) {
+      console.warn('API вернул не массив:', data);
+      showError('API вернул некорректный ответ');
       return;
     }
 
-    container.innerHTML = data.map(item => `
-      <div class="movie" onclick="playMovie('${item.magnet}', '${item.title}')">
-        <img src="${item.poster || 'https://placehold.co/150x225/333/fff?text=Нет+постера'}" 
-             onerror="this.src='https://placehold.co/150x225/333/fff?text=Нет+постера'">
-        <p><strong>${item.title || 'Без названия'}</strong><br>${item.year || ''}</p>
-        <p style="font-size:12px;color:#888;">⚡${item.seeders || 0} сидов</p>
-      </div>
-    `).join('');
+    if (data.length === 0) {
+      showStatus('😕 Ничего не найдено');
+      return;
+    }
+
+    // Рендерим карточки
+    container.innerHTML = data.map(item => {
+      const poster = item.poster || 'https://placehold.co/150x225/333/fff?text=Нет+постера';
+      const title = item.title || 'Без названия';
+      const year = item.year || '';
+      const seeders = item.seeders || 0;
+      const magnet = item.magnet || '';
+
+      return `
+        <div class="movie" onclick="playMovie('${magnet.replace(/'/g, "\\'")}', '${title.replace(/'/g, "\\'")}')">
+          <img src="${poster}" 
+               onerror="this.src='https://placehold.co/150x225/333/fff?text=Нет+постера'" 
+               alt="${title}" 
+               loading="lazy" />
+          <p><strong>${title}</strong><br>${year}</p>
+          <div class="seeders">⚡ ${seeders} сидов</div>
+        </div>
+      `;
+    }).join('');
 
   } catch (error) {
     console.error('Ошибка поиска:', error);
-    container.innerHTML = '<p>❌ Ошибка поиска. Попробуйте позже.</p>';
+    showError('Ошибка поиска. Попробуйте позже.');
   }
 };
 
-// ===== ПЛЕЕР =====
+// =============================================
+// ПЛЕЕР
+// =============================================
 window.playMovie = function(magnet, title) {
   console.log('🎬 Клик по:', title);
   console.log('🧲 Magnet:', magnet);
 
   if (!magnet) {
-    alert('Нет magnet-ссылки для этого фильма');
+    alert('❌ Нет magnet-ссылки для этого фильма');
+    return;
+  }
+
+  // Проверяем, загружена ли библиотека WebTorrent
+  if (typeof WebTorrent === 'undefined') {
+    console.error('❌ WebTorrent не загружен!');
+    alert('❌ Библиотека WebTorrent не загружена. Проверьте интернет.');
     return;
   }
 
   const video = document.getElementById('player');
+  if (!video) {
+    console.error('❌ Элемент video не найден!');
+    return;
+  }
 
-  if (currentTorrent) {
-    currentTorrent.destroy();
+  // Останавливаем предыдущий торрент
+  if (currentClient) {
+    try {
+      currentClient.destroy();
+    } catch (e) {
+      console.warn('Ошибка при остановке торрента:', e);
+    }
+    currentClient = null;
     currentTorrent = null;
   }
 
-  const client = new WebTorrent();
-  video.innerHTML = '<p>⏳ Загрузка торрента...</p>';
+  // Очищаем видео
+  video.innerHTML = '';
+  video.style.display = 'block';
+  video.controls = true;
 
-  client.add(magnet, function(torrent) {
-    currentTorrent = torrent;
-    console.log('✅ Торрент загружен, файлов:', torrent.files.length);
+  // Показываем статус на видео
+  const statusMsg = document.createElement('div');
+  statusMsg.style.cssText = 'color:#aaa; text-align:center; padding:40px; font-size:18px;';
+  statusMsg.textContent = '⏳ Подключение к пирам...';
+  video.appendChild(statusMsg);
 
-    const file = torrent.files.find(f => 
-      f.name.endsWith('.mp4') || 
-      f.name.endsWith('.mkv') || 
-      f.name.endsWith('.avi')
-    );
+  try {
+    const client = new WebTorrent();
+    currentClient = client;
 
-    if (!file) {
-      alert('Видеофайл не найден в этом торренте');
-      return;
+    client.on('error', function(err) {
+      console.error('❌ Ошибка WebTorrent:', err);
+      if (video) {
+        video.innerHTML = `<div style="color:#ff4444; text-align:center; padding:40px;">❌ Ошибка: ${err.message}</div>`;
+      }
+    });
+
+    client.add(magnet, function(torrent) {
+      currentTorrent = torrent;
+      console.log('✅ Торрент добавлен, файлов:', torrent.files.length);
+      console.log('📊 Пиров:', torrent.numPeers);
+
+      // Удаляем статусное сообщение
+      if (video) video.innerHTML = '';
+
+      // Ищем видеофайл
+      const file = torrent.files.find(f =>
+        f.name.endsWith('.mp4') ||
+        f.name.endsWith('.mkv') ||
+        f.name.endsWith('.avi') ||
+        f.name.endsWith('.webm')
+      );
+
+      if (!file) {
+        const filesList = torrent.files.map(f => f.name).join(', ');
+        console.warn('📁 Доступные файлы:', filesList);
+        if (video) {
+          video.innerHTML = `<div style="color:#ffaa00; text-align:center; padding:40px;">❌ Видеофайл не найден<br><span style="font-size:14px;color:#888;">Доступны: ${filesList}</span></div>`;
+        }
+        return;
+      }
+
+      console.log('🎥 Найден файл:', file.name);
+      console.log('📏 Размер:', (file.length / (1024 * 1024)).toFixed(2), 'MB');
+
+      try {
+        const stream = file.createReadStream();
+        stream.pipe(video);
+        video.play();
+        console.log('▶️ Видео запущено');
+      } catch (streamError) {
+        console.error('❌ Ошибка при стриминге:', streamError);
+        if (video) {
+          video.innerHTML = `<div style="color:#ff4444; text-align:center; padding:40px;">❌ Ошибка воспроизведения: ${streamError.message}</div>`;
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Критическая ошибка в playMovie:', error);
+    if (video) {
+      video.innerHTML = `<div style="color:#ff4444; text-align:center; padding:40px;">❌ Ошибка: ${error.message}</div>`;
     }
-
-    console.log('🎥 Найден файл:', file.name);
-    file.createReadStream().pipe(video);
-    video.play();
-  });
+  }
 };
+
+// =============================================
+// ЗАГРУЗКА ПРОГРЕССА (Supabase) — можно добавить позже
+// =============================================
+// Функции saveProgress и loadProgress пока закомментированы,
+// так как они требуют дополнительной настройки.
+// Если нужно — раскомментируй и используй.
+
+/*
+async function saveProgress(userId, contentId, timestamp) {
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/user_progress`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates'
+      },
+      body: JSON.stringify({
+        user_id: userId,
+        content_id: contentId,
+        timestamp: timestamp,
+        updated_at: new Date().toISOString()
+      })
+    });
+  } catch (e) {
+    console.error('Ошибка сохранения прогресса:', e);
+  }
+}
+
+async function loadProgress(userId, contentId) {
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/user_progress?user_id=eq.${userId}&content_id=eq.${encodeURIComponent(contentId)}&select=timestamp`,
+      { headers: { 'apikey': SUPABASE_KEY } }
+    );
+    const data = await res.json();
+    return data.length > 0 ? data[0].timestamp : 0;
+  } catch (e) {
+    console.error('Ошибка загрузки прогресса:', e);
+    return 0;
+  }
+}
+*/
+
+console.log('✅ Кинотеатр загружен. Введите название и нажмите "Найти".');
 </script>
 </body>
 </html>
